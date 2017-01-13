@@ -111,10 +111,7 @@ namespace FishGL {
 
 			RenderBitmap.UnlockBits(Dta);
 			//DepthBitmap.UnlockBits(DDta);
-
-			RenderBitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-			//DepthBitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-
+			
 			Gfx.DrawImageUnscaled(RenderBitmap, 0, 0);
 		}
 	}

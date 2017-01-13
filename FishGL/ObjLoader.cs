@@ -82,7 +82,7 @@ namespace FishGL {
 							T.B_UV = UVs[UVInds[1]];
 							T.C_UV = UVs[UVInds[2]];
 
-							Tris.Add(T);
+							Tris.Add(T * new Vector3(1, -1, 1));
 							break;
 						}
 
