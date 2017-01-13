@@ -42,7 +42,7 @@ namespace FishGL {
 
 	class Program {
 		public static bool Running;
-		public static Bitmap RenderBitmap;
+		public static Bitmap RenderBitmap, DepthBitmap, TextureBitmap;
 
 		[STAThread]
 		static void Main(string[] args) {
@@ -50,16 +50,37 @@ namespace FishGL {
 			Running = true;
 
 			RenderBitmap = new Bitmap(800, 600);
+			DepthBitmap = new Bitmap(RenderBitmap.Width, RenderBitmap.Height);
+			TextureBitmap = new Bitmap(Image.FromFile("models\\diablo3_pose\\diablo3_pose_diffuse.png"));
+			TextureBitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
+
+			DDta = DepthBitmap.LockBits(new Rectangle(0, 0, DepthBitmap.Width, DepthBitmap.Height),
+				ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+			Texture = TextureBitmap.LockBits(new Rectangle(0, 0, TextureBitmap.Width, TextureBitmap.Height),
+				ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
 
 			ObjLoader.Load(File.ReadAllLines("models\\diablo3_pose\\diablo3_pose.obj"), out Triangles);
+
+			/*Triangles = new Vector3[][] {
+				new Vector3[] { new Vector3(10, 70, 0), new Vector3(50, 160, 0), new Vector3(70, 80, 0) },
+				new Vector3[] {new Vector3(180, 50, 0), new Vector3(150, 1, 0), new Vector3(70, 180, 0) },
+				new Vector3[] { new Vector3(180, 150, 0), new Vector3(120, 160, 0), new Vector3(130, 180, 0) }
+			};
+
+			for (int i = 0; i < Triangles.Length; i++) {
+				for (int j = 0; j < 3; j++)
+					Triangles[i][j] /= 180.0f;
+			}*/
 
 			using (RenderForm RForm = new RenderForm()) {
 				RForm.Show();
 
-				RForm.Refresh();
+
 
 				while (Running) {
 					Application.DoEvents();
+
+					RForm.Refresh();
 				}
 			}
 
@@ -67,38 +88,33 @@ namespace FishGL {
 			//Console.ReadLine();
 		}
 
-		static Vector3[][] Triangles;
-		static bool Rendered = false;
+		static Tri[] Triangles;
+		static BitmapData DDta;
+
+		public static BitmapData Texture;
 
 		public static void Render(Graphics Gfx) {
-			//if (!Rendered) {
-			//	Rendered = true;
+			BitmapData Dta = RenderBitmap.LockBits(new Rectangle(0, 0, RenderBitmap.Width, RenderBitmap.Height),
+				ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+			/*DDta = DepthBitmap.LockBits(new Rectangle(0, 0, DepthBitmap.Width, DepthBitmap.Height),
+				ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);*/
 
-				BitmapData Dta = RenderBitmap.LockBits(new Rectangle(0, 0, RenderBitmap.Width, RenderBitmap.Height),
-					ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+			FishGL.Clear(Dta, Color.Black);
+			FishGL.Clear(DDta, Color.Black);
+			
+			Vector3 Scale = new Vector3((float)RenderBitmap.Width / 2, (float)RenderBitmap.Height / 2, 1);
+			Vector3 Offset = new Vector3(1.0f, 1.0f, 1.0f);
 
-				FishGL.Clear(Dta, Color.Black);
+			for (int i = 0; i < Triangles.Length; i++) {
+				FishGL.Triangle(ref Triangles[i], (Triangles[i] + Offset) * Scale, Dta, DDta, Color.White);
+			}
 
-				/*FishGL.Line(new Vector2(50, 330), new Vector2(300, 50), Dta, Color.Red);
-				FishGL.Line(new Vector2(300, 50), new Vector2(400, 300), Dta, Color.Green);
-				FishGL.Line(new Vector2(400, 300), new Vector2(50, 330), Dta, Color.Blue);*/
-
-				Vector3 Scale = new Vector3((float)RenderBitmap.Width / 2, (float)RenderBitmap.Height / 2, 1);
-				Vector3 Offset = new Vector3(1.0f, 1.0f, 0.0f);
-
-				for (int i = 0; i < Triangles.Length; i++) {
-					//Console.WriteLine("{0} / {1}", i, Triangles.Length);
-					
-					Vector3[] Tri = Triangles[i];
-					FishGL.Line((Tri[0] + Offset) * Scale, (Tri[1] + Offset) * Scale, Dta, Color.DarkCyan);
-					FishGL.Line((Tri[1] + Offset) * Scale, (Tri[2] + Offset) * Scale, Dta, Color.DarkCyan);
-					FishGL.Line((Tri[2] + Offset) * Scale, (Tri[0] + Offset) * Scale, Dta, Color.DarkCyan);
-				}
-
-				RenderBitmap.UnlockBits(Dta);
-			//}
+			RenderBitmap.UnlockBits(Dta);
+			//DepthBitmap.UnlockBits(DDta);
 
 			RenderBitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
+			//DepthBitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
+
 			Gfx.DrawImageUnscaled(RenderBitmap, 0, 0);
 		}
 	}

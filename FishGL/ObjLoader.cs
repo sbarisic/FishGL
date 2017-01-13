@@ -3,35 +3,45 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Numerics;using System.Globalization;
+using System.Numerics;
+using System.Globalization;
 
 namespace FishGL {
 	static class ObjLoader {
-		static void ParseFaceElement(string Element, out int VertInd) {
+		static void ParseFaceElement(string Element, out int VertInd, out int UVInd) {
 			string[] ElementTokens = Element.Trim().Split('/');
 
-			VertInd = int.Parse(ElementTokens[0]);
+			VertInd = int.Parse(ElementTokens[0]) - 1;
+
+			UVInd = 0;
+			if (ElementTokens[1].Length != 0)
+				UVInd = int.Parse(ElementTokens[1]) - 1;
 		}
 
-		static void ParseFace(string[] Tokens, out int[] VertInds) {
+		static void ParseFace(string[] Tokens, out int[] VertInds, out int[] UVInds) {
 			VertInds = new int[Tokens.Length];
-			for (int i = 0; i < VertInds.Length; i++) {
-				int VertInd;
-				ParseFaceElement(Tokens[i], out VertInd);
-				VertInds[i] = VertInd;
-			}
+			UVInds = new int[Tokens.Length];
+
+			for (int i = 0; i < VertInds.Length; i++)
+				ParseFaceElement(Tokens[i], out VertInds[i], out UVInds[i]);
 		}
 
 		static float ParseFloat(string Str) {
 			return float.Parse(Str, CultureInfo.InvariantCulture);
 		}
 
-		public static void Load(string[] Lines, out Vector3[][] Triangles) {
+		public static void Load(string[] Lines, out Tri[] Triangles) {
 			List<Vector3> Verts = new List<Vector3>();
-			List<Vector3[]> Tris = new List<Vector3[]>();
+			List<Vector2> UVs = new List<Vector2>();
+
+			List<Tri> Tris = new List<Tri>();
 
 			for (int i = 0; i < Lines.Length; i++) {
 				string L = Lines[i].ToLower().Trim();
+
+				while (L.Contains("  "))
+					L = L.Replace("  ", " ");
+
 				if (L.Length == 0 || L.StartsWith("#"))
 					continue;
 
@@ -45,6 +55,7 @@ namespace FishGL {
 						}
 
 					case "vt": { // Texture coords
+							UVs.Add(new Vector2(ParseFloat(Tokens[1]), ParseFloat(Tokens[2])));
 							break;
 						}
 
@@ -54,13 +65,24 @@ namespace FishGL {
 
 					case "f": { // Face
 							int[] VertInds;
-							ParseFace(Tokens.Skip(1).ToArray(), out VertInds);
+							int[] UVInds;
+
+							ParseFace(Tokens.Skip(1).ToArray(), out VertInds, out UVInds);
 
 							/*Tris.Add(Verts[VertInds[0] - 1]);
 							Tris.Add(Verts[VertInds[1] - 1]);
 							Tris.Add(Verts[VertInds[2] - 1]);*/
 
-							Tris.Add(new Vector3[] { Verts[VertInds[0] - 1], Verts[VertInds[1] - 1], Verts[VertInds[2] - 1] });
+							Tri T = new Tri();
+							T.A = Verts[VertInds[0]];
+							T.B = Verts[VertInds[1]];
+							T.C = Verts[VertInds[2]];
+
+							T.A_UV = UVs[UVInds[0]];
+							T.B_UV = UVs[UVInds[1]];
+							T.C_UV = UVs[UVInds[2]];
+
+							Tris.Add(T);
 							break;
 						}
 
