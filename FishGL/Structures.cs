@@ -68,13 +68,23 @@ namespace FishGL {
 			this.Float = Float;
 		}
 
-		public static FGLColor ScaleColor(FGLColor Clr, float Scale) {
-			return new FGLColor((byte)(Clr.R * Scale), (byte)(Clr.G * Scale), (byte)(Clr.B * Scale), Clr.A);
+		public static void ScaleColor(ref FGLColor Clr, float Scale) {
+			Clr.R = (byte)(Clr.R * Scale);
+			Clr.G = (byte)(Clr.G * Scale);
+			Clr.B = (byte)(Clr.B * Scale);
 		}
 
-		public static FGLColor ScaleColor(FGLColor Clr, FGLColor Scale) {
-			return new FGLColor((byte)(Clr.R * (Scale.R / 255.0f)),
-				(byte)(Clr.G * (Scale.G / 255.0f)), (byte)(Clr.B * (Scale.B / 255.0f)), Clr.A);
+		public static void ScaleColor(ref FGLColor Clr, ref FGLColor Scale) {
+			Clr.R = (byte)(Clr.R * (Scale.R / 255.0f));
+			Clr.G = (byte)(Clr.G * (Scale.G / 255.0f));
+			Clr.B = (byte)(Clr.B * (Scale.B / 255.0f));
+		}
+
+		public static void Blend(ref FGLColor Dest, ref FGLColor Src) {
+			Dest.R = (byte)(((Dest.R * (255 - Src.A)) + (Src.R * Src.A)) / 255);
+			Dest.G = (byte)(((Dest.G * (255 - Src.A)) + (Src.G * Src.A)) / 255);
+			Dest.B = (byte)(((Dest.B * (255 - Src.A)) + (Src.B * Src.A)) / 255);
+			Dest.A = (byte)(((Dest.A * (255 - Src.A)) + (Src.A * Src.A)) / 255);
 		}
 
 		public static implicit operator FGLColor(Color Clr) {
@@ -115,6 +125,9 @@ namespace FishGL {
 		}
 
 		public void Get(float U, float V, out FGLColor Clr) {
+			/*U = Helpers.Clamp(U, 0, 1);
+			V = Helpers.Clamp(V, 0, 1);*/
+
 			Clr = DataPtr[(int)(V * Height) * Width + (int)(U * Width)];
 		}
 

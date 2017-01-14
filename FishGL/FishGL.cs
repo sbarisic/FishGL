@@ -20,6 +20,15 @@ namespace FishGL {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static float Clamp(float V, float Min, float Max) {
+			if (V < Min)
+				return Min;
+			if (V > Max)
+				return Max;
+			return V;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void BoundingBox(ref Tri T, out Vector3 Minimum, out Vector3 Maximum) {
 			Minimum = new Vector3(Min(T.A.X, T.B.X, T.C.X), Min(T.A.Y, T.B.Y, T.C.Y), Min(T.A.Z, T.B.Z, T.C.Z));
 			Maximum = new Vector3(Max(T.A.X, T.B.X, T.C.X), Max(T.A.Y, T.B.Y, T.C.Y), Max(T.A.Z, T.B.Z, T.C.Z));
@@ -43,7 +52,7 @@ namespace FishGL {
 
 	public abstract class FGLShader {
 		public abstract void Vertex(ref Vector3 Vert);
-		public abstract FGLColor? Pixel(float U, float V);
+		public abstract void Pixel(ref FGLColor OutColor, float U, float V, int ScrX, int ScrY, float Depth, ref bool Discard);
 	}
 
 	public static unsafe class FishGL {
@@ -59,8 +68,6 @@ namespace FishGL {
 
 		public static FGLColor DrawColor = FGLColor.White;
 		public static FGLShader ShaderProgram;
-
-		static Vector3 Bary;
 
 		public static void Fill(ref FGLFramebuffer FB, FGLColor Clr) {
 			fixed (byte* DataPtr = FB.Data) {
@@ -131,7 +138,8 @@ namespace FishGL {
 			if (EnableBackfaceCulling && Cross.Z < 0)
 				return;
 
-			Vector3 Min, Max;
+			FGLColor PixColor = DrawColor;
+			Vector3 Min, Max, BCnt = Vector3.Zero;
 			Helpers.BoundingBox(ref Tri, out Min, out Max);
 
 			for (int Y = (int)Min.Y; Y < Max.Y; Y++)
@@ -139,29 +147,27 @@ namespace FishGL {
 					if (X < 0 || Y < 0 || X >= ColorBuffer.Width || Y >= ColorBuffer.Height)
 						continue;
 
-					Helpers.Barycentric(ref Tri, X, Y, ref Bary);
-					if (Bary.X < 0 || Bary.Y < 0 || Bary.Z < 0)
+					Helpers.Barycentric(ref Tri, X, Y, ref BCnt);
+					if (BCnt.X < 0 || BCnt.Y < 0 || BCnt.Z < 0)
 						continue;
 
 					int Idx = Y * ColorBuffer.Width + X;
-					float D = ((Tri.A.Z * Bary.X) + (Tri.B.Z * Bary.Y) + (Tri.C.Z * Bary.Z));
+					float D = ((Tri.A.Z * BCnt.X) + (Tri.B.Z * BCnt.Y) + (Tri.C.Z * BCnt.Z));
 
 					if (!EnableDepthTesting || (DepthBuffer.DataPtr[Idx].Float > D)) {
 						// Calculate UV coordinates
-						float TexU = (Tri.A_UV.X * Bary.X) + (Tri.B_UV.X * Bary.Y) + (Tri.C_UV.X * Bary.Z);
-						float TexV = (Tri.A_UV.Y * Bary.X) + (Tri.B_UV.Y * Bary.Y) + (Tri.C_UV.Y * Bary.Z);
+						float TexU = (Tri.A_UV.X * BCnt.X) + (Tri.B_UV.X * BCnt.Y) + (Tri.C_UV.X * BCnt.Z);
+						float TexV = (Tri.A_UV.Y * BCnt.X) + (Tri.B_UV.Y * BCnt.Y) + (Tri.C_UV.Y * BCnt.Z);
 
-						FGLColor PixColor = DrawColor;
 						if (ShaderProgram != null) {
-							FGLColor? ShaderPixColor = ShaderProgram.Pixel(TexU, TexV);
-							if (!ShaderPixColor.HasValue)
-								continue; // Pixel was discarded
-
-							PixColor = ShaderPixColor.Value;
+							bool Discard = false;
+							ShaderProgram.Pixel(ref PixColor, TexU, TexV, X, Y, D, ref Discard);
+							if (Discard)
+								continue;
 						}
 
 						if (EnableShading)
-							PixColor = FGLColor.ScaleColor(PixColor, Math.Abs(Cross.Z));
+							FGLColor.ScaleColor(ref PixColor, Math.Abs(Cross.Z));
 
 						if (EnableTexturing) {
 							// Scale UVs to texture size
@@ -169,11 +175,15 @@ namespace FishGL {
 							TexV *= TEX0Buffer.Height;
 
 							FGLColor TexClr = TEX0Buffer.DataPtr[(int)TexV * TEX0Buffer.Width + (int)TexU];
-							PixColor = FGLColor.ScaleColor(PixColor, TexClr);
+							FGLColor.ScaleColor(ref PixColor, ref TexClr);
 						}
 
 						DepthBuffer.DataPtr[Idx].Float = D;
-						ColorBuffer.DataPtr[Y * ColorBuffer.Width + X] = PixColor;
+
+						if (PixColor.A == 255)
+							ColorBuffer.DataPtr[Y * ColorBuffer.Width + X] = PixColor;
+						else if (PixColor.A != 0)
+							FGLColor.Blend(ref ColorBuffer.DataPtr[Y * ColorBuffer.Width + X], ref PixColor);
 					}
 				}
 

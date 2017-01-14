@@ -4,6 +4,7 @@ using System.Diagnostics;
 using SFML.System;
 using SFML.Window;
 using SFML.Graphics;
+using System.Threading;
 
 namespace FishGL {
 	class Program {
@@ -58,11 +59,16 @@ namespace FishGL {
 			while (RWind.IsOpen) {
 				RWind.DispatchEvents();
 				RWind.Clear(Color.Black);
+
 				SWatch.Restart();
 				Render();
 				SWatch.Stop();
+
 				Tex.Update(FishGL.ColorBuffer.Data);
+
 				FrameTime = SWatch.ElapsedTicks * TPS;
+				//SWatch.Restart();
+
 				InfoText.DisplayedString = string.Format("{0:0.0000} ms; {1} FPS\n{2} tris",
 					FrameTime * 1000.0f, 1.0f / FrameTime, Triangles.Length);
 				RWind.Draw(TexSprite);
@@ -111,18 +117,16 @@ namespace FishGL {
 		}
 	}
 
-	unsafe class Shadurr : FGLShader {
+	class Shadurr : FGLShader {
 		public Matrix4x4 ViewMatrix, ProjectionMatrix, ModelMatrix;
 
 		public override void Vertex(ref Vector3 Vert) {
 			Vert = Vector3.Transform(Vert, ModelMatrix * ViewMatrix * ProjectionMatrix);
 		}
 
-		public override FGLColor? Pixel(float U, float V) {
-			FGLColor TexColor;
-			FishGL.TEX0Buffer.Get(U, V, out TexColor);
-
-			return TexColor;
+		public override void Pixel(ref FGLColor OutColor, float U, float V, int ScrX, int ScrY, float Depth, ref bool Discard) {
+			FishGL.TEX0Buffer.Get(U, V, out OutColor);
+			FGLColor.ScaleColor(ref OutColor, Math.Abs(Depth / -900));
 		}
 	}
 }
