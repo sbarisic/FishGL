@@ -1,118 +1,128 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Diagnostics;
-using System.IO;
+using SFML.System;
+using SFML.Window;
+using SFML.Graphics;
 
 namespace FishGL {
-	class RenderForm : Form {
-		Stopwatch SWatch = new Stopwatch();
-
-		public RenderForm() {
-			Text = "FishGL";
-			ClientSize = new Size(Program.RenderBitmap.Width, Program.RenderBitmap.Height);
-			FormBorderStyle = FormBorderStyle.Fixed3D;
-			StartPosition = FormStartPosition.CenterScreen;
-			MaximizeBox = false;
-			DoubleBuffered = true;
-
-			SWatch.Start();
-		}
-
-		protected override void OnClosing(CancelEventArgs e) {
-			Program.Running = false;
-			base.OnClosing(e);
-		}
-
-		protected override void OnPaint(PaintEventArgs e) {
-			base.OnPaint(e);
-			Program.Render(e.Graphics);
-
-			e.Graphics.DrawString(string.Format("Time: {0} ms", SWatch.ElapsedMilliseconds), SystemFonts.CaptionFont, Brushes.White, 0, 0);
-			SWatch.Restart();
-		}
-	}
-
 	class Program {
-		public static bool Running;
-		public static Bitmap RenderBitmap, DepthBitmap, TextureBitmap;
+		//public static Bitmap RenderBitmap, DepthBitmap, TextureBitmap;
 
-		[STAThread]
 		static void Main(string[] args) {
-			Console.Title = "FishGL Console";
-			Running = true;
+			//Console.Title = "FishGL Console";
 
-			RenderBitmap = new Bitmap(800, 600);
-			DepthBitmap = new Bitmap(RenderBitmap.Width, RenderBitmap.Height);
-			TextureBitmap = new Bitmap(Image.FromFile("models\\diablo3_pose\\diablo3_pose_diffuse.png"));
-			TextureBitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
+			VideoMode VMode = new VideoMode((uint)W, (uint)H);
+			RenderWindow RWind = new RenderWindow(VMode, "FishGL", Styles.Close);
+			RWind.SetVerticalSyncEnabled(false);
+			RWind.SetFramerateLimit(0);
+			RWind.Closed += (S, E) => RWind.Close();
 
-			DDta = DepthBitmap.LockBits(new Rectangle(0, 0, DepthBitmap.Width, DepthBitmap.Height),
-				ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
-			Texture = TextureBitmap.LockBits(new Rectangle(0, 0, TextureBitmap.Width, TextureBitmap.Height),
-				ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+			RWind.KeyReleased += (S, E) => {
+				switch (E.Code) {
+					case Keyboard.Key.F1:
+						FishGL.EnableWireframe = !FishGL.EnableWireframe;
+						break;
 
-			ObjLoader.Load(File.ReadAllLines("models\\diablo3_pose\\diablo3_pose.obj"), out Triangles);
+					case Keyboard.Key.F2:
+						FishGL.EnableDepthTesting = !FishGL.EnableDepthTesting;
+						break;
 
-			/*Triangles = new Vector3[][] {
-				new Vector3[] { new Vector3(10, 70, 0), new Vector3(50, 160, 0), new Vector3(70, 80, 0) },
-				new Vector3[] {new Vector3(180, 50, 0), new Vector3(150, 1, 0), new Vector3(70, 180, 0) },
-				new Vector3[] { new Vector3(180, 150, 0), new Vector3(120, 160, 0), new Vector3(130, 180, 0) }
+					case Keyboard.Key.F3:
+						FishGL.EnableBackfaceCulling = !FishGL.EnableBackfaceCulling;
+						break;
+
+					case Keyboard.Key.F4:
+						FishGL.EnableShading = !FishGL.EnableShading;
+						break;
+				}
 			};
 
-			for (int i = 0; i < Triangles.Length; i++) {
-				for (int j = 0; j < 3; j++)
-					Triangles[i][j] /= 180.0f;
-			}*/
+			Font DrawFont = new Font("C:\\Windows\\Fonts\\Consola.ttf");
 
-			using (RenderForm RForm = new RenderForm()) {
-				RForm.Show();
+			Text InfoText = new Text("Hello World!", DrawFont, 12);
+			InfoText.Position = new Vector2f(1, 1);
 
+			Text InfoText2 = new Text("F1 - Wireframe\nF2 - Depth testing\nF3 - Backface culling\nF4 - Shading", DrawFont, 12);
+			InfoText2.Position = new Vector2f(1, 50);
 
+			Texture Tex = new Texture(VMode.Width, VMode.Height);
+			Sprite TexSprite = new Sprite(Tex);
 
-				while (Running) {
-					Application.DoEvents();
+			Stopwatch SWatch = new Stopwatch();
+			float TPS = 1.0f / Stopwatch.Frequency;
+			float FrameTime = 0;
 
-					RForm.Refresh();
-				}
+			Init();
+
+			while (RWind.IsOpen) {
+				RWind.DispatchEvents();
+				RWind.Clear(Color.Black);
+				SWatch.Restart();
+				Render();
+				SWatch.Stop();
+				Tex.Update(FishGL.ColorBuffer.Data);
+				FrameTime = SWatch.ElapsedTicks * TPS;
+				InfoText.DisplayedString = string.Format("{0:0.0000} ms; {1} FPS\n{2} tris",
+					FrameTime * 1000.0f, 1.0f / FrameTime, Triangles.Length);
+				RWind.Draw(TexSprite);
+				RWind.Draw(InfoText);
+				RWind.Draw(InfoText2);
+				RWind.Display();
 			}
-
-			//Console.WriteLine("Done!");
-			//Console.ReadLine();
 		}
 
 		static Tri[] Triangles;
-		static BitmapData DDta;
 
-		public static BitmapData Texture;
+		static int W = 800, H = 600;
+		static Shadurr Shdr;
+		static Stopwatch SWatch = Stopwatch.StartNew();
 
-		public static void Render(Graphics Gfx) {
-			BitmapData Dta = RenderBitmap.LockBits(new Rectangle(0, 0, RenderBitmap.Width, RenderBitmap.Height),
-				ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-			/*DDta = DepthBitmap.LockBits(new Rectangle(0, 0, DepthBitmap.Width, DepthBitmap.Height),
-				ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);*/
+		static void Init() {
+			Triangles = ObjLoader.Load("models\\diablo3_pose\\diablo3_pose.obj");
 
-			FishGL.Clear(Dta, Color.Black);
-			FishGL.Clear(DDta, Color.Black);
-			
-			Vector3 Scale = new Vector3((float)RenderBitmap.Width / 2, (float)RenderBitmap.Height / 2, 1);
-			Vector3 Offset = new Vector3(1.0f, 1.0f, 1.0f);
+			FishGL.ColorBuffer = new FGLFramebuffer(W, H);
+			FishGL.DepthBuffer = new FGLFramebuffer(W, H);
+			FishGL.TEX0Buffer = FGLFramebuffer.FromFile("models\\diablo3_pose\\diablo3_pose_diffuse.png");
 
-			for (int i = 0; i < Triangles.Length; i++) {
-				FishGL.Triangle(ref Triangles[i], (Triangles[i] + Offset) * Scale, Dta, DDta, Color.White);
-			}
+			//FGL.EnableTexturing = true;
+			FishGL.EnableShading = true;
+			FishGL.EnableBackfaceCulling = true;
+			FishGL.EnableDepthTesting = true;
+			FishGL.EnableWireframe = false;
 
-			RenderBitmap.UnlockBits(Dta);
-			//DepthBitmap.UnlockBits(DDta);
-			
-			Gfx.DrawImageUnscaled(RenderBitmap, 0, 0);
+			float S = Math.Min(W, H);
+			Shdr = new Shadurr() {
+				ProjectionMatrix = Matrix4x4.CreatePerspectiveFieldOfView(90 * (float)Math.PI / 180, (float)W / H, 1, 1000),
+				ViewMatrix = Matrix4x4.CreateScale(new Vector3(1, -1, 1) * S / 2) *
+					Matrix4x4.CreateTranslation(new Vector3(W / 1.5f, H / 2, S))
+			};
+			FishGL.ShaderProgram = Shdr;
+		}
+
+		static void Render() {
+			Shdr.ModelMatrix = Matrix4x4.CreateRotationY(SWatch.ElapsedMilliseconds / 2000.0f);
+
+			FishGL.Fill(ref FishGL.ColorBuffer, FGLColor.Black);
+			FishGL.Fill(ref FishGL.DepthBuffer, FGLColor.DepthZero);
+
+			for (int i = 0; i < Triangles.Length; i++)
+				FishGL.Triangle(Triangles[i]);
+		}
+	}
+
+	unsafe class Shadurr : FGLShader {
+		public Matrix4x4 ViewMatrix, ProjectionMatrix, ModelMatrix;
+
+		public override void Vertex(ref Vector3 Vert) {
+			Vert = Vector3.Transform(Vert, ModelMatrix * ViewMatrix * ProjectionMatrix);
+		}
+
+		public override FGLColor? Pixel(float U, float V) {
+			FGLColor TexColor;
+			FishGL.TEX0Buffer.Get(U, V, out TexColor);
+
+			return TexColor;
 		}
 	}
 }

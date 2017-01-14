@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Numerics;
 using System.Globalization;
+using System.IO;
 
 namespace FishGL {
 	static class ObjLoader {
@@ -30,7 +31,7 @@ namespace FishGL {
 			return float.Parse(Str, CultureInfo.InvariantCulture);
 		}
 
-		public static void Load(string[] Lines, out Tri[] Triangles) {
+		public static Tri[] Load(string[] Lines) {
 			List<Vector3> Verts = new List<Vector3>();
 			List<Vector2> UVs = new List<Vector2>();
 
@@ -82,7 +83,7 @@ namespace FishGL {
 							T.B_UV = UVs[UVInds[1]];
 							T.C_UV = UVs[UVInds[2]];
 
-							Tris.Add(T * new Vector3(1, -1, 1));
+							Tris.Add(T);
 							break;
 						}
 
@@ -92,7 +93,11 @@ namespace FishGL {
 				}
 			}
 
-			Triangles = Tris.ToArray();
+			return Tris.ToArray();
+		}
+
+		public static Tri[] Load(string Path) {
+			return Load(File.ReadAllLines(Path));
 		}
 	}
 }
