@@ -13,15 +13,234 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\cglm">
+      <UniqueIdentifier>{b7d25b64-6a46-4b41-8a3b-c4956a18156e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cglm">
+      <UniqueIdentifier>{4c4180b5-8dd0-4500-b328-a0f158185428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cglm\call">
+      <UniqueIdentifier>{ed8535fe-a7fa-4e09-b05e-965a65eeb940}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cglm\simd">
+      <UniqueIdentifier>{35be961a-0d73-4570-97a8-159826b04cf0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cglm\simd\avx">
+      <UniqueIdentifier>{f9621f58-0c5b-48ae-b620-e95268c024e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cglm\simd\neon">
+      <UniqueIdentifier>{dbd83fef-4eb4-4bb4-bc51-f463e107464c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cglm\simd\sse">
+      <UniqueIdentifier>{d8455c80-1bee-412b-b43e-bb834adf0c7a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FishGL.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\affine.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\box.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\cam.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\dllmain.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\ease.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\euler.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\frustum.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\io.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\mat3.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\mat4.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\plane.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\project.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\quat.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\sphere.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\vec3.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cglm\src\vec4.c">
+      <Filter>Source Files\cglm</Filter>
+    </ClCompile>
+    <ClCompile Include="FishGL_Test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FishGL.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\affine.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\affine-mat.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\box.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\cam.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\cglm.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\color.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\common.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\ease.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\euler.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\frustum.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\io.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\mat3.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\mat4.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\plane.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\project.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\quat.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\sphere.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\types.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\util.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\vec3.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\vec3-ext.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\vec4.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\vec4-ext.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\version.h">
+      <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\affine.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\box.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\cam.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\ease.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\euler.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\frustum.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\io.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\mat3.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\mat4.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\plane.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\project.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\quat.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\sphere.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\vec3.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\call\vec4.h">
+      <Filter>Header Files\cglm\call</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\intrin.h">
+      <Filter>Header Files\cglm\simd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\avx\affine.h">
+      <Filter>Header Files\cglm\simd\avx</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\avx\mat4.h">
+      <Filter>Header Files\cglm\simd\avx</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\neon\mat4.h">
+      <Filter>Header Files\cglm\simd\neon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\affine.h">
+      <Filter>Header Files\cglm\simd\sse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\mat3.h">
+      <Filter>Header Files\cglm\simd\sse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\mat4.h">
+      <Filter>Header Files\cglm\simd\sse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\quat.h">
+      <Filter>Header Files\cglm\simd\sse</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cglm\src\config.h">
+      <Filter>Header Files\cglm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

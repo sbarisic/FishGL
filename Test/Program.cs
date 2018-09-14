@@ -16,6 +16,9 @@ namespace Test {
 		static extern void fglInit(IntPtr VideoMemory, int Width, int Height, int BPP, int Stride, int Order);
 
 		[DllImport("FishGL2", CallingConvention = CallingConvention.Cdecl)]
+		static extern void fglDebugInit(int W, int H, int BPP);
+
+		[DllImport("FishGL2", CallingConvention = CallingConvention.Cdecl)]
 		static extern void fglDebugLoop();
 
 		static void Main(string[] Args) {
@@ -37,6 +40,7 @@ namespace Test {
 			Texture Tex = new Texture((uint)Width, (uint)Height);
 			Sprite TexSprite = new Sprite(Tex);
 			fglInit(VideoMemoryPtr, Width, Height, BPP, 0, 1);
+			fglDebugInit(Width, Height, BPP);
 
 			// Debug stuff
 			const int FntSize = 16;

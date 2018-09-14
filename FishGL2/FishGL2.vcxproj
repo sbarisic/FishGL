@@ -73,18 +73,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
+    <IncludePath>$(SolutionDir)cglm\include\cglm\;$(SolutionDir)FishGL2\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
+    <IncludePath>$(SolutionDir)cglm\include\cglm\;$(SolutionDir)FishGL2\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
+    <IncludePath>$(SolutionDir)cglm\include\cglm\;$(SolutionDir)FishGL2\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
+    <IncludePath>$(SolutionDir)cglm\include\cglm\;$(SolutionDir)FishGL2\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -92,9 +96,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);CGLM_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -107,9 +112,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);CGLM_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -124,9 +130,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);CGLM_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -143,9 +150,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;FISHGL2_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);CGLM_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -155,9 +163,75 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\cglm\src\affine.c" />
+    <ClCompile Include="..\cglm\src\box.c" />
+    <ClCompile Include="..\cglm\src\cam.c" />
+    <ClCompile Include="..\cglm\src\dllmain.c" />
+    <ClCompile Include="..\cglm\src\ease.c" />
+    <ClCompile Include="..\cglm\src\euler.c" />
+    <ClCompile Include="..\cglm\src\frustum.c" />
+    <ClCompile Include="..\cglm\src\io.c" />
+    <ClCompile Include="..\cglm\src\mat3.c" />
+    <ClCompile Include="..\cglm\src\mat4.c" />
+    <ClCompile Include="..\cglm\src\plane.c" />
+    <ClCompile Include="..\cglm\src\project.c" />
+    <ClCompile Include="..\cglm\src\quat.c" />
+    <ClCompile Include="..\cglm\src\sphere.c" />
+    <ClCompile Include="..\cglm\src\vec3.c" />
+    <ClCompile Include="..\cglm\src\vec4.c" />
     <ClCompile Include="FishGL.c" />
+    <ClCompile Include="FishGL_Test.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\cglm\include\cglm\affine-mat.h" />
+    <ClInclude Include="..\cglm\include\cglm\affine.h" />
+    <ClInclude Include="..\cglm\include\cglm\box.h" />
+    <ClInclude Include="..\cglm\include\cglm\call.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\affine.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\box.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\cam.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\ease.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\euler.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\frustum.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\io.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\mat3.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\mat4.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\plane.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\project.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\quat.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\sphere.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\vec3.h" />
+    <ClInclude Include="..\cglm\include\cglm\call\vec4.h" />
+    <ClInclude Include="..\cglm\include\cglm\cam.h" />
+    <ClInclude Include="..\cglm\include\cglm\cglm.h" />
+    <ClInclude Include="..\cglm\include\cglm\color.h" />
+    <ClInclude Include="..\cglm\include\cglm\common.h" />
+    <ClInclude Include="..\cglm\include\cglm\ease.h" />
+    <ClInclude Include="..\cglm\include\cglm\euler.h" />
+    <ClInclude Include="..\cglm\include\cglm\frustum.h" />
+    <ClInclude Include="..\cglm\include\cglm\io.h" />
+    <ClInclude Include="..\cglm\include\cglm\mat3.h" />
+    <ClInclude Include="..\cglm\include\cglm\mat4.h" />
+    <ClInclude Include="..\cglm\include\cglm\plane.h" />
+    <ClInclude Include="..\cglm\include\cglm\project.h" />
+    <ClInclude Include="..\cglm\include\cglm\quat.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\avx\affine.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\avx\mat4.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\intrin.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\neon\mat4.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\affine.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\mat3.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\mat4.h" />
+    <ClInclude Include="..\cglm\include\cglm\simd\sse2\quat.h" />
+    <ClInclude Include="..\cglm\include\cglm\sphere.h" />
+    <ClInclude Include="..\cglm\include\cglm\types.h" />
+    <ClInclude Include="..\cglm\include\cglm\util.h" />
+    <ClInclude Include="..\cglm\include\cglm\vec3-ext.h" />
+    <ClInclude Include="..\cglm\include\cglm\vec3.h" />
+    <ClInclude Include="..\cglm\include\cglm\vec4-ext.h" />
+    <ClInclude Include="..\cglm\include\cglm\vec4.h" />
+    <ClInclude Include="..\cglm\include\cglm\version.h" />
+    <ClInclude Include="..\cglm\src\config.h" />
     <ClInclude Include="FishGL.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
