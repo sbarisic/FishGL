@@ -166,7 +166,6 @@
     <ClCompile Include="..\cglm\src\affine.c" />
     <ClCompile Include="..\cglm\src\box.c" />
     <ClCompile Include="..\cglm\src\cam.c" />
-    <ClCompile Include="..\cglm\src\dllmain.c" />
     <ClCompile Include="..\cglm\src\ease.c" />
     <ClCompile Include="..\cglm\src\euler.c" />
     <ClCompile Include="..\cglm\src\frustum.c" />
@@ -180,6 +179,7 @@
     <ClCompile Include="..\cglm\src\vec3.c" />
     <ClCompile Include="..\cglm\src\vec4.c" />
     <ClCompile Include="FishGL.c" />
+    <ClCompile Include="FishGLShader.c" />
     <ClCompile Include="FishGL_Test.c" />
   </ItemGroup>
   <ItemGroup>
@@ -233,6 +233,9 @@
     <ClInclude Include="..\cglm\include\cglm\version.h" />
     <ClInclude Include="..\cglm\src\config.h" />
     <ClInclude Include="FishGL.h" />
+    <ClInclude Include="FishGLConfig.h" />
+    <ClInclude Include="FishGLShader.h" />
+    <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

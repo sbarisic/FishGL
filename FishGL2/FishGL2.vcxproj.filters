@@ -48,9 +48,6 @@
     <ClCompile Include="..\cglm\src\cam.c">
       <Filter>Source Files\cglm</Filter>
     </ClCompile>
-    <ClCompile Include="..\cglm\src\dllmain.c">
-      <Filter>Source Files\cglm</Filter>
-    </ClCompile>
     <ClCompile Include="..\cglm\src\ease.c">
       <Filter>Source Files\cglm</Filter>
     </ClCompile>
@@ -88,6 +85,9 @@
       <Filter>Source Files\cglm</Filter>
     </ClCompile>
     <ClCompile Include="FishGL_Test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FishGLShader.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -241,6 +241,15 @@
     </ClInclude>
     <ClInclude Include="..\cglm\src\config.h">
       <Filter>Header Files\cglm</Filter>
+    </ClInclude>
+    <ClInclude Include="FishGLShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FishGLConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

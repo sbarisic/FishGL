@@ -25,6 +25,7 @@ namespace Test {
 			int Width = 1366;
 			int Height = 768;
 			int BPP = 32;
+			Test();
 
 			// Video memory
 			byte[] VideoMemory = new byte[Width * Height * (BPP / 8)];
@@ -49,6 +50,9 @@ namespace Test {
 
 			Stopwatch SWatch = Stopwatch.StartNew();
 			float Dt = 0;
+			float[] ADtArray = new float[25];
+			int ADtIdx = 0;
+			float ADt = 0;
 
 			Action<int, int, string> DrawText = (X, Y, Str) => {
 				DebugText.Position = new Vector2f(X, Y);
@@ -66,11 +70,23 @@ namespace Test {
 
 				DrawText(0, 0, string.Format("{0:F4} ms", Dt));
 				DrawText(0, FntSize, string.Format("{0:F0} FPS", 1.0f / Dt));
+				DrawText(0, FntSize * 2, string.Format("{0:F0} FPS (Avg)", 1.0f / ADt));
 
 				RWind.Display();
 				Dt = (float)SWatch.ElapsedMilliseconds / 1000;
+
+				ADtArray[ADtIdx++] = Dt;
+				if (ADtIdx >= ADtArray.Length)
+					ADtIdx = 0;
+				for (int i = 0; i < ADtArray.Length; i++)
+					ADt += ADtArray[i];
+				ADt /= ADtArray.Length;
+
 				SWatch.Restart();
 			}
+		}
+
+		static void Test() {
 		}
 	}
 }
