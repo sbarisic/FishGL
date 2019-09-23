@@ -169,7 +169,9 @@ namespace FishGL3 {
 		}
 
 		public static void CreateRenderContext(string PlatformName = "amd") {
-			const bool DisableOptimizations = false;
+			const bool DisableOptimizations = true;
+
+			string Include = "-I CL ";
 
 			ErrorCode Err;
 
@@ -199,8 +201,8 @@ namespace FishGL3 {
 			CLContext = Cl.CreateContext(null, 1, Devices, null, IntPtr.Zero, out Err);
 			CLQueue = Cl.CreateCommandQueue(CLContext, Devices[0], CommandQueueProperties.None, out Err);
 
-			CLProgram = CL_CreateProgram(new[] { File.ReadAllText("CL/kernel.cl") });
-			CLCheckError(Cl.BuildProgram(CLProgram, 0, null, DisableOptimizations ? "-cl-opt-disable" : null, null, IntPtr.Zero));
+			CLProgram = CL_CreateProgram(new[] { File.ReadAllText("CL/kernel.cl"), File.ReadAllText("CL/vertex.cl"), File.ReadAllText("CL/fragment.cl") });
+			CLCheckError(Cl.BuildProgram(CLProgram, 0, null, Include + (DisableOptimizations ? "-cl-opt-disable " : ""), null, IntPtr.Zero));
 
 			CLKernel = Cl.CreateKernel(CLProgram, "main", out Err);
 			CLCheckError(Err);
