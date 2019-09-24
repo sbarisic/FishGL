@@ -13,31 +13,34 @@ namespace FishGL3 {
 		static Stopwatch SWatch = Stopwatch.StartNew();
 		static float FrameTime;
 
-		static Matrix4x4 CreateRot(Vector3 RotPos, float Angle) {
-			return Matrix4x4.CreateTranslation(-RotPos) * Matrix4x4.CreateFromYawPitchRoll(0, 0, Angle) * Matrix4x4.CreateTranslation(RotPos);
-		}
-
 		static void Main(string[] args) {
 			FGL.CreateRenderContext();
 			FGL.CreateWindow(800, 600);
-			FGL.ClearColor(83, 125, 185);
 
-			Vector3[] Triangle = new Vector3[3];
-			int TriangleBuffer = FGL.CreateBuffer(sizeof(float) * 3 * Triangle.Length);
-			FGL.BindTriangleBuffer(TriangleBuffer);
+			int VertexCount = 3;
+			int VertBuffer = FGL.CreateBuffer(sizeof(float) * 3 * VertexCount);
+
+			Vector3* Verts = (Vector3*)FGL.MapBuffer(VertBuffer, FGL_BUFFER_FLAGS.ReadWrite);
+			Verts[0] = new Vector3(150, 470, 0);
+			Verts[1] = new Vector3(330, 100, 0);
+			Verts[2] = new Vector3(500, 300, 0);
+
+			Vector3 RotOrig = new Vector3(350, 200, 0);
+			Matrix4x4 Mat = Matrix4x4.CreateTranslation(-RotOrig)
+				* Matrix4x4.CreateFromYawPitchRoll(0, 0, 0.005f)
+				* Matrix4x4.CreateTranslation(RotOrig);
 
 			while (FGL.PollEvents()) {
-				Matrix4x4 TransMat = CreateRot(new Vector3(350, 300, 0), Watch.ElapsedMilliseconds / 1000.0f);
-				Triangle[0] = Vector3.Transform(new Vector3(150, 470, 0), TransMat);
-				Triangle[1] = Vector3.Transform(new Vector3(330, 100, 0), TransMat);
-				Triangle[2] = Vector3.Transform(new Vector3(500, 300, 0), TransMat);
-				FGL.WriteBuffer(TriangleBuffer, Triangle);
+				for (int i = 0; i < VertexCount; i++)
+					Verts[i] = Vector3.Transform(Verts[i], Mat);
 
-				FGL.Clear();
-				FGL.Draw(Triangle.Length);
+				FGL.Clear(new FGLColor(0, 0, 0));
+				FGL.Draw(VertBuffer, VertexCount);
 				FGL.Swap();
-				Thread.Sleep(0);
 
+
+
+				Thread.Sleep(0);
 				int FPS = (int)(1.0f / FrameTime);
 				FGL.SetWindowTitle(string.Format("{0} FPS, {1} ms", FPS, FrameTime * 1000));
 				FrameTime = SWatch.ElapsedMilliseconds / 1000.0f;

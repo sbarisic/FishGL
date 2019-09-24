@@ -18,6 +18,10 @@ typedef struct {
 	byte B;
 } Color;
 
+Color color(byte R, byte G, byte B) {
+	return (Color) { R, G, B };
+}
+
 typedef struct {
 	float X;
 	float Y;
@@ -46,6 +50,10 @@ typedef struct {
 
 Vec4 vec4(float X, float Y, float Z, float W) {
 	return (Vec4) { X, Y, Z, W };
+}
+
+Color colorf(Vec4 Clr) {
+	return color((byte)(Clr.X * Clr.W * 255), (byte)(Clr.Y * Clr.W * 255), (byte)(Clr.Z * Clr.W * 255));
 }
 
 typedef struct {
@@ -102,6 +110,12 @@ bool BaryOutside(Vec3 Bar) {
 	return (Bar.X < 0 || Bar.Y < 0 || Bar.Z < 0);
 }
 
+Vec2 Vec2Interpolate(Vec2 A, Vec2 B, Vec2 C, Vec3 Bar) {
+	float X = (A.X * Bar.X) + (B.X * Bar.Y) + (C.X * Bar.Z);
+	float Y = (A.Y * Bar.X) + (B.Y * Bar.Y) + (C.Y * Bar.Z);
+	return (Vec2) { X, Y };
+}
+
 Vec3 Vec3Interpolate(Vec3 A, Vec3 B, Vec3 C, Vec3 Bar) {
 	float X = (A.X * Bar.X) + (B.X * Bar.Y) + (C.X * Bar.Z);
 	float Y = (A.Y * Bar.X) + (B.Y * Bar.Y) + (C.Y * Bar.Z);
@@ -109,10 +123,12 @@ Vec3 Vec3Interpolate(Vec3 A, Vec3 B, Vec3 C, Vec3 Bar) {
 	return (Vec3) { X, Y, Z };
 }
 
-Vec2 Vec2Interpolate(Vec2 A, Vec2 B, Vec2 C, Vec3 Bar) {
+Vec4 Vec4Interpolate(Vec4 A, Vec4 B, Vec4 C, Vec3 Bar) {
 	float X = (A.X * Bar.X) + (B.X * Bar.Y) + (C.X * Bar.Z);
 	float Y = (A.Y * Bar.X) + (B.Y * Bar.Y) + (C.Y * Bar.Z);
-	return (Vec2) { X, Y };
+	float Z = (A.Z * Bar.X) + (B.Z * Bar.Y) + (C.Z * Bar.Z);
+	float W = (A.W * Bar.X) + (B.W * Bar.Y) + (C.W * Bar.Z);
+	return (Vec4) { X, Y, Z, W };
 }
 
 

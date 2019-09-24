@@ -7,9 +7,9 @@ __kernel void main(__constant FGLGlobal* Global, __global Color* Out, __constant
 	if (x < 0 || y < 0 || x >= Global->Width || y >= Global->Height)
 		return;
 
-	Vec3 AClr = vec3(1, 0, 0);
-	Vec3 BClr = vec3(0, 1, 0);
-	Vec3 CClr = vec3(0, 0, 1);
+	Vec4 AClr = vec4(1, 0, 0, 1);
+	Vec4 BClr = vec4(0, 1, 0, 1);
+	Vec4 CClr = vec4(0, 0, 1, 1);
 
 	Vec2 AUV = vec2(0, 0);
 	Vec2 BUV = vec2(0, 0);
@@ -25,8 +25,8 @@ __kernel void main(__constant FGLGlobal* Global, __global Color* Out, __constant
 			continue;
 
 		Vec2 UV = Vec2Interpolate(AUV, BUV, CUV, Bar);
-		Vec3 Clr = Vec3Interpolate(AClr, BClr, CClr, Bar);
+		Vec4 Clr = Vec4Interpolate(AClr, BClr, CClr, Bar);
 
-		Out[y * Global->Width + x] = (Color) { (byte)(Clr.X * 255), (byte)(Clr.Y * 255), (byte)(Clr.Z * 255) };
+		Out[y * Global->Width + x] = colorf(Clr);
 	}
 }

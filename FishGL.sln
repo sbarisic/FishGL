@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FishGL3", "FishGL3\FishGL3.csproj", "{12656DB5-676D-44C2-B5D7-B728FEBF6687}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCL", "OpenCL\OpenCL.csproj", "{F45140D4-BBCE-4550-9C01-A913472B0DF6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,6 +68,18 @@ Global
 		{12656DB5-676D-44C2-B5D7-B728FEBF6687}.Release|x64.Build.0 = Release|Any CPU
 		{12656DB5-676D-44C2-B5D7-B728FEBF6687}.Release|x86.ActiveCfg = Release|Any CPU
 		{12656DB5-676D-44C2-B5D7-B728FEBF6687}.Release|x86.Build.0 = Release|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Debug|x64.Build.0 = Debug|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Debug|x86.Build.0 = Debug|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Release|x64.ActiveCfg = Release|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Release|x64.Build.0 = Release|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Release|x86.ActiveCfg = Release|Any CPU
+		{F45140D4-BBCE-4550-9C01-A913472B0DF6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

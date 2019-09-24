@@ -1,5 +1,4 @@
-﻿using OpenCL.Net;
-using OpenCL.Net.Extensions;
+﻿using OpenCL;
 using SDL2;
 using System;
 using System.Collections.Generic;
@@ -9,7 +8,6 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using CLProgram = OpenCL.Net.Program;
 
 namespace FishGL3 {
 	public class FGLWindow {
@@ -44,29 +42,84 @@ namespace FishGL3 {
 		}
 	}
 
+	unsafe class FGLBuffer {
+		public cl_mem Buffer;
+		public void* Memory;
+		public int Length;
+
+		public void* MappedMemory;
+
+		public FGLBuffer(cl_mem Buffer, int Length) {
+			this.Buffer = Buffer;
+			this.Length = Length;
+		}
+
+		public void Delete() {
+			FGL.CLCheckError(CL.clReleaseMemObject(Buffer));
+		}
+	}
+
+	class FGLBufferList {
+		List<FGLBuffer> Buffers;
+
+		public FGLBufferList() {
+			Buffers = new List<FGLBuffer>();
+		}
+
+		public int Add(FGLBuffer Buffer) {
+			for (int i = 0; i < Buffers.Count; i++) {
+				if (Buffers[i] == null) {
+					Buffers[i] = Buffer;
+					return i;
+				}
+			}
+
+			Buffers.Add(Buffer);
+			return Buffers.Count - 1;
+		}
+
+		public void Remove(int Handle) {
+			Get(Handle);
+			Buffers[Handle] = null;
+		}
+
+		public FGLBuffer Get(int Handle) {
+			if (Buffers[Handle] == null || Handle < 0 || Handle >= Buffers.Count)
+				throw new Exception("Invalid FGL buffer object " + Handle);
+
+			return Buffers[Handle];
+		}
+	}
+
+	public enum FGL_BUFFER_FLAGS {
+		ReadWrite = (int)cl_mem_flags.CL_MEM_READ_WRITE,
+		WriteOnly = (int)cl_mem_flags.CL_MEM_WRITE_ONLY,
+		ReadOnly = (int)cl_mem_flags.CL_MEM_READ_ONLY,
+	}
+
+	public enum FGL_TEXTURE_TYPE {
+		RGB,
+		Depth
+	}
+
 	public unsafe static class FGL {
 		static FGLGlobal Global;
-		static IMem CLGlobal;
+		static cl_mem CLGlobal;
 
 		static IntPtr Wnd;
 		static IntPtr Rnd;
 		static IntPtr Tex;
 
-		static Context CLContext;
-		static CommandQueue CLQueue;
-		static Device CLDevice;
-		static CLProgram CLProgram;
-		static Kernel CLKernel;
+		static cl_context CLContext;
+		static cl_command_queue CLQueue;
+		static cl_device_id CLDevice;
+		static cl_program CLProgram;
+		static cl_kernel CLKernel;
 		static uint CLWorkGroupSize;
-		static uint CLWorkGroupMultiple;
 
-		static int MemoryLen;
-		static FGLColor* Memory;
-		static IMem CLMemory;
+		static int ColorBuffer;
 
-		static IMem ClearBuffer;
-
-		static List<IMem> BufferHandles = new List<IMem>();
+		static FGLBufferList BufferHandles = new FGLBufferList();
 
 		public static void CreateWindow(int W, int H) {
 			Global = new FGLGlobal(W, H);
@@ -75,12 +128,11 @@ namespace FishGL3 {
 			SDL.SDL_CreateWindowAndRenderer(W, H, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN, out Wnd, out Rnd);
 			Tex = SDL.SDL_CreateTexture(Rnd, SDL.SDL_PIXELFORMAT_RGB24, (int)SDL.SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING, W, H);
 
-			MemoryLen = W * H * sizeof(FGLColor);
-			Memory = (FGLColor*)Marshal.AllocHGlobal(MemoryLen);
+			ErrorCode Err;
+			CLGlobal = CL.clCreateBuffer(CLContext, cl_mem_flags.CL_MEM_READ_ONLY, (ulong)sizeof(FGLGlobal), null, out Err);
 
-			CLGlobal = Cl.CreateBuffer(CLContext, MemFlags.ReadOnly, sizeof(FGLGlobal), out ErrorCode Err);
-			CLMemory = Cl.CreateBuffer(CLContext, MemFlags.WriteOnly, MemoryLen, out Err);
-			ClearBuffer = Cl.CreateBuffer(CLContext, MemFlags.ReadWrite, MemoryLen, out Err);
+			ColorBuffer = CreateTexture(W, H, FGL_TEXTURE_TYPE.RGB);
+			MapBuffer(ColorBuffer, FGL_BUFFER_FLAGS.ReadWrite);
 		}
 
 		public static void SetWindowTitle(string Title) {
@@ -96,44 +148,36 @@ namespace FishGL3 {
 			return true;
 		}
 
-		public static void PlotPixel(int X, int Y, FGLColor Clr) {
-			Memory[Y * Global.Width + X] = Clr;
-		}
+		public static void Clear(FGLColor ClearColor) {
+			int Len = Global.Width * Global.Height;
+			FGLColor* Pixels = (FGLColor*)GetBuffer(ColorBuffer).MappedMemory;
 
-		public static void ClearColor(byte R, byte G, byte B) {
-			for (int i = 0; i < Global.Width * Global.Height; i++)
-				Memory[i] = new FGLColor(R, G, B);
-
-			Cl.EnqueueWriteBuffer(CLQueue, ClearBuffer, Bool.True, IntPtr.Zero, (IntPtr)MemoryLen, (IntPtr)Memory, 0, null, out Event Evt);
-		}
-
-		public static void Clear() {
-			Cl.EnqueueCopyBuffer(CLQueue, ClearBuffer, CLMemory, IntPtr.Zero, IntPtr.Zero, (IntPtr)MemoryLen, 0, null, out Event Evt);
+			for (int i = 0; i < Len; i++)
+				Pixels[i] = ClearColor;
 		}
 
 		public static void Swap() {
-			Cl.Finish(CLQueue);
-			Cl.EnqueueReadBuffer(CLQueue, CLMemory, Bool.True, IntPtr.Zero, (IntPtr)MemoryLen, (IntPtr)Memory, 0, null, out Event Evt);
+			CL.clFinish(CLQueue);
 
 			SDL.SDL_Rect Rect = new SDL.SDL_Rect();
 			Rect.x = Rect.y = 0;
 			Rect.w = Global.Width;
 			Rect.h = Global.Height;
 
-			SDL.SDL_UpdateTexture(Tex, ref Rect, new IntPtr(Memory), sizeof(FGLColor) * Global.Width);
+			SDL.SDL_UpdateTexture(Tex, ref Rect, new IntPtr(GetBuffer(ColorBuffer).MappedMemory), sizeof(FGLColor) * Global.Width);
 			SDL.SDL_RenderClear(Rnd);
 			SDL.SDL_RenderCopy(Rnd, Tex, IntPtr.Zero, IntPtr.Zero);
 			SDL.SDL_RenderPresent(Rnd);
 		}
 
-		static string CL_GetPlatformName(Platform P) {
-			ErrorCode Err;
+		static string CL_GetPlatformName(cl_platform_id P) {
+			ErrorCode err;
 
-			string Ext = Cl.GetPlatformInfo(P, PlatformInfo.Extensions, out Err).ToString();
-			string Name = Cl.GetPlatformInfo(P, PlatformInfo.Name, out Err).ToString();
-			string Profile = Cl.GetPlatformInfo(P, PlatformInfo.Profile, out Err).ToString();
-			string Vendor = Cl.GetPlatformInfo(P, PlatformInfo.Vendor, out Err).ToString();
-			string Version = Cl.GetPlatformInfo(P, PlatformInfo.Version, out Err).ToString();
+			string Ext = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_EXTENSIONS, out err);
+			string Name = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_NAME, out err);
+			string Profile = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_PROFILE, out err);
+			string Vendor = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_VENDOR, out err);
+			string Version = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_VERSION, out err);
 
 			return Name;
 		}
@@ -149,21 +193,21 @@ namespace FishGL3 {
 			return null;
 		}*/
 
-		static void CLCheckError(ErrorCode Err) {
-			if (Err == ErrorCode.BuildProgramFailure) {
-				string Log = Cl.GetProgramBuildInfo(CLProgram, CLDevice, ProgramBuildInfo.Log, out ErrorCode Tmp).ToString();
+		internal static void CLCheckError(ErrorCode Err) {
+			if (Err == ErrorCode.CL_BUILD_PROGRAM_FAILURE) {
+				string Log = CL.clGetProgramBuildInfoStr(CLProgram, CLDevice, cl_program_build_info.CL_PROGRAM_BUILD_LOG, out ErrorCode Tmp);
 				Console.WriteLine(Log);
 			}
 
-			if (Err != ErrorCode.Success)
+			if (Err != ErrorCode.CL_SUCCESS)
 				throw new Exception("OpenCL error " + Err);
 		}
 
-		static CLProgram CL_CreateProgram(string[] Sources) {
+		static cl_program CL_CreateProgram(string[] Sources) {
 			for (int i = 0; i < Sources.Length; i++)
 				Sources[i] = Sources[i].Replace("\r", "");
 
-			CLProgram Prog = Cl.CreateProgramWithSource(CLContext, (uint)Sources.Length, Sources, Sources.Select(S => (IntPtr)S.Length).ToArray(), out ErrorCode Err);
+			cl_program Prog = CL.clCreateProgramWithSource(CLContext, Sources, out ErrorCode Err);
 			CLCheckError(Err);
 			return Prog;
 		}
@@ -175,8 +219,8 @@ namespace FishGL3 {
 
 			ErrorCode Err;
 
-			Platform[] Platforms = Cl.GetPlatformIDs(out Err);
-			Platform SelectedPlatform = Platforms[0];
+			cl_platform_id[] Platforms = CL.clGetPlatformIDs(out Err);
+			cl_platform_id SelectedPlatform = Platforms[0];
 
 			if (PlatformName != null) {
 				foreach (var P in Platforms) {
@@ -189,7 +233,7 @@ namespace FishGL3 {
 				}
 			}
 
-			Device[] Devices = Cl.GetDeviceIDs(SelectedPlatform, DeviceType.Gpu, out Err);
+			cl_device_id[] Devices = CL.clGetDeviceIDs(SelectedPlatform, cl_device_type.CL_DEVICE_TYPE_GPU, out Err);
 
 			if (Devices.Length != 1)
 				throw new Exception("Expected one GPU");
@@ -198,68 +242,72 @@ namespace FishGL3 {
 
 			//CL_GetDeviceInfo(Devices[0]);
 
-			CLContext = Cl.CreateContext(null, 1, Devices, null, IntPtr.Zero, out Err);
-			CLQueue = Cl.CreateCommandQueue(CLContext, Devices[0], CommandQueueProperties.None, out Err);
+			CLContext = CL.clCreateContext(null, 1, Devices, null, null, out Err);
+			CLQueue = CL.clCreateCommandQueue(CLContext, Devices[0], cl_command_queue_properties.NONE, out Err);
 
 			CLProgram = CL_CreateProgram(new[] { File.ReadAllText("CL/kernel.cl"), File.ReadAllText("CL/vertex.cl"), File.ReadAllText("CL/fragment.cl") });
-			CLCheckError(Cl.BuildProgram(CLProgram, 0, null, Include + (DisableOptimizations ? "-cl-opt-disable " : ""), null, IntPtr.Zero));
+			CLCheckError(CL.clBuildProgram(CLProgram, 0, null, Include + (DisableOptimizations ? "-cl-opt-disable " : ""), null, null));
 
-			CLKernel = Cl.CreateKernel(CLProgram, "main", out Err);
+			CLKernel = CL.clCreateKernel(CLProgram, "main", out Err);
 			CLCheckError(Err);
 
-			CLWorkGroupSize = Cl.GetKernelWorkGroupInfo(CLKernel, Devices[0], KernelWorkGroupInfo.WorkGroupSize, out Err).CastTo<uint>();
+			ulong Val = 0;
+			Err = CL.clGetKernelWorkGroupInfo(CLKernel, Devices[0], cl_kernel_work_group_info.CL_KERNEL_WORK_GROUP_SIZE, sizeof(ulong), &Val, null);
+			CLWorkGroupSize = (uint)Val;
 		}
 
-		public static void Draw(int Triangles) {
-			Event Evt;
+		public static void Draw(int TriangleBuffer, int Triangles) {
 			Global.TriCount = Triangles / 3;
 
 			fixed (FGLGlobal* GlobalPtr = &Global) {
-				Cl.EnqueueWriteBuffer(CLQueue, CLGlobal, Bool.True, IntPtr.Zero, (IntPtr)sizeof(FGLGlobal), (IntPtr)GlobalPtr, 0, null, out Evt);
+				CL.clEnqueueWriteBuffer(CLQueue, CLGlobal, true, 0, (ulong)sizeof(FGLGlobal), GlobalPtr, 0, null, null);
 			}
 
-			Cl.SetKernelArg(CLKernel, 0, CLGlobal);
-			Cl.SetKernelArg(CLKernel, 1, CLMemory);
+			CL.clSetKernelArg(CLKernel, 0, CLGlobal);
+			CL.clSetKernelArg(CLKernel, 1, GetBuffer(ColorBuffer).Buffer);
+			CL.clSetKernelArg(CLKernel, 2, GetBuffer(TriangleBuffer).Buffer);
 
-			CLCheckError(Cl.EnqueueNDRangeKernel(CLQueue, CLKernel, 2, null, new IntPtr[] { (IntPtr)Global.Width, (IntPtr)Global.Height }, new IntPtr[] { (IntPtr)16, (IntPtr)16 }, 0, null, out Evt));
+			CLCheckError(CL.clEnqueueNDRangeKernel(CLQueue, CLKernel, 2, null, new ulong[] { (ulong)Global.Width, (ulong)Global.Height }, new ulong[] { (ulong)16, (ulong)16 }, 0, null, null));
 		}
 
-		static IMem GetBuffer(int BufferObject) {
-			if (BufferHandles[BufferObject] == null)
-				throw new Exception("Trying to get non existing buffer");
-
-			return BufferHandles[BufferObject];
+		static FGLBuffer GetBuffer(int BufferObject) {
+			return BufferHandles.Get(BufferObject);
 		}
 
-		public static int CreateBuffer(int Size, bool Read = true, bool Write = false) {
-			MemFlags Flags = MemFlags.ReadOnly;
-
-			if (Read && Write)
-				Flags = MemFlags.ReadWrite;
-			else if (!Read && Write)
-				Flags = MemFlags.WriteOnly;
-
-			IMem Buffer = Cl.CreateBuffer(CLContext, Flags, Size, out ErrorCode Err);
+		public static int CreateBuffer(int Size, FGL_BUFFER_FLAGS Flags = FGL_BUFFER_FLAGS.ReadWrite) {
+			cl_mem_flags MemFlags = (cl_mem_flags)Flags | cl_mem_flags.CL_MEM_ALLOC_HOST_PTR;
+			cl_mem Buffer = CL.clCreateBuffer(CLContext, MemFlags, (ulong)Size, null, out ErrorCode Err);
 			CLCheckError(Err);
 
-			for (int i = 0; i < BufferHandles.Count; i++) {
-				if (BufferHandles[i] == null) {
-					BufferHandles[i] = Buffer;
-					return i;
-				}
-			}
-
-			BufferHandles.Add(Buffer);
-			return BufferHandles.Count - 1;
+			return BufferHandles.Add(new FGLBuffer(Buffer, Size));
 		}
 
 		public static void DeleteBuffer(int BufferObject) {
-			Cl.ReleaseMemObject(GetBuffer(BufferObject));
-			BufferHandles[BufferObject] = null;
+			BufferHandles.Get(BufferObject).Delete();
+			BufferHandles.Remove(BufferObject);
+		}
+
+		public static int CreateTexture(int Width, int Height, FGL_TEXTURE_TYPE Type) {
+			int Len = Width * Height;
+
+			switch (Type) {
+				case FGL_TEXTURE_TYPE.RGB:
+					Len *= sizeof(FGLColor);
+					break;
+
+				case FGL_TEXTURE_TYPE.Depth:
+					Len *= sizeof(float);
+					break;
+
+				default:
+					throw new Exception("Invalid texture type " + Type);
+			}
+
+			return CreateBuffer(Len);
 		}
 
 		public static void WriteBuffer(int BufferObject, void* Data, int Len) {
-			Cl.EnqueueWriteBuffer(CLQueue, GetBuffer(BufferObject), Bool.True, IntPtr.Zero, (IntPtr)Len, (IntPtr)Data, 0, null, out Event E);
+			CL.clEnqueueWriteBuffer(CLQueue, GetBuffer(BufferObject).Buffer, true, 0, (ulong)Len, Data, 0, null, null);
 		}
 
 		public static void WriteBuffer<T>(int BufferObject, T[] Data) where T : unmanaged {
@@ -267,8 +315,33 @@ namespace FishGL3 {
 				WriteBuffer(BufferObject, DataPtr, sizeof(T) * Data.Length);
 		}
 
-		public static void BindTriangleBuffer(int BufferObject) {
-			Cl.SetKernelArg(CLKernel, 2, GetBuffer(BufferObject));
+		public static void* MapBuffer(int BufferObject, FGL_BUFFER_FLAGS Flags) {
+			FGLBuffer Buffer = BufferHandles.Get(BufferObject);
+
+			cl_map_flags MapFlags;
+
+			if (Flags == FGL_BUFFER_FLAGS.ReadOnly)
+				MapFlags = cl_map_flags.CL_MAP_READ;
+			else if (Flags == FGL_BUFFER_FLAGS.WriteOnly)
+				MapFlags = cl_map_flags.CL_MAP_WRITE;
+			else if (Flags == FGL_BUFFER_FLAGS.ReadWrite)
+				MapFlags = cl_map_flags.CL_MAP_READ | cl_map_flags.CL_MAP_WRITE;
+			else
+				throw new Exception("Invalid buffer map flags " + Flags);
+
+			void* Mem = CL.clEnqueueMapBuffer(CLQueue, Buffer.Buffer, true, MapFlags, 0, (ulong)Buffer.Length, 0, null, null, out ErrorCode Err);
+			CLCheckError(Err);
+
+			Buffer.MappedMemory = Mem;
+			return Mem;
+		}
+
+		public static void UnmapBuffer(int BufferObject) {
+			FGLBuffer Buffer = BufferHandles.Get(BufferObject);
+
+			CLCheckError(CL.clEnqueueUnmapMemObject(CLQueue, Buffer.Buffer, Buffer.MappedMemory, 0, null, null));
+
+			Buffer.MappedMemory = null;
 		}
 	}
 }
