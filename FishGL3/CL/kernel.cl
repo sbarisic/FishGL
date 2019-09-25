@@ -1,10 +1,10 @@
 #include "soft_render.cl"
 
-__kernel void main(__constant FGLGlobal* Global, __global Color* Out, __constant Triangle* Tris) {
+__kernel void _main(const int Width, const int Height, const int VertexCount, __global Color* Out, __global Vec3* Verts) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
-	if (x < 0 || y < 0 || x >= Global->Width || y >= Global->Height)
+	if (x < 0 || y < 0 || x >= Width || y >= Height)
 		return;
 
 	Vec4 AClr = vec4(1, 0, 0, 1);
@@ -15,10 +15,10 @@ __kernel void main(__constant FGLGlobal* Global, __global Color* Out, __constant
 	Vec2 BUV = vec2(0, 0);
 	Vec2 CUV = vec2(0, 0);
 
-	for (int32 i = 0; i < Global->TriCount; i++) {
-		Vec3 A = vert_main(Tris[i].A);
-		Vec3 B = vert_main(Tris[i].B);
-		Vec3 C = vert_main(Tris[i].C);
+	for (int i = 0; i < VertexCount; i += 3) {
+		Vec3 A = vert_main(Verts[i + 0]);
+		Vec3 B = vert_main(Verts[i + 1]);
+		Vec3 C = vert_main(Verts[i + 2]);
 
 		Vec3 Bar = Barycentric(x, y, A, B, C);
 		if (BaryOutside(Bar))
@@ -27,6 +27,6 @@ __kernel void main(__constant FGLGlobal* Global, __global Color* Out, __constant
 		Vec2 UV = Vec2Interpolate(AUV, BUV, CUV, Bar);
 		Vec4 Clr = Vec4Interpolate(AClr, BClr, CClr, Bar);
 
-		Out[y * Global->Width + x] = colorf(Clr);
+		Out[y * Width + x] = colorf(Clr);
 	}
 }

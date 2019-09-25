@@ -6,13 +6,6 @@ typedef unsigned char byte;
 typedef int int32;
 
 typedef struct {
-	int32 Width;
-	int32 Height;
-
-	int32 TriCount;
-} FGLGlobal;
-
-typedef struct {
 	byte R;
 	byte G;
 	byte B;

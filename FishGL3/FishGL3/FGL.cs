@@ -10,11 +10,37 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace FishGL3 {
-	public class FGLWindow {
-		public int Width;
-		public int Height;
+	public enum FGL_DEVICE_TYPE {
+		CPU,
+		GPU,
+		Accelerator
+	}
 
-		public IntPtr Tex;
+	public class FGLDevice {
+		public string Extensions;
+		public string Name;
+		public string Profile;
+		public string Vendor;
+		public string Version;
+		public FGL_DEVICE_TYPE DeviceType;
+
+		internal cl_platform_id Platform;
+		internal cl_device_id Device;
+
+		public FGLDevice(string Extensions, string Name, string Profile, string Vendor, string Version, FGL_DEVICE_TYPE DeviceType, cl_platform_id Platform, cl_device_id Device) {
+			this.Extensions = Extensions;
+			this.Name = Name;
+			this.Profile = Profile;
+			this.Vendor = Vendor;
+			this.Version = Version;
+			this.DeviceType = DeviceType;
+			this.Platform = Platform;
+			this.Device = Device;
+		}
+
+		public override string ToString() {
+			return string.Format("{0} - {1}, {2}, {3}", DeviceType, Vendor, Name, Profile);
+		}
 	}
 
 	public struct FGLColor {
@@ -42,9 +68,12 @@ namespace FishGL3 {
 		}
 	}
 
-	unsafe class FGLBuffer {
+	interface ICLBuffer {
+		void Delete();
+	}
+
+	unsafe class FGLBuffer : ICLBuffer {
 		public cl_mem Buffer;
-		public void* Memory;
 		public int Length;
 
 		public void* MappedMemory;
@@ -52,6 +81,7 @@ namespace FishGL3 {
 		public FGLBuffer(cl_mem Buffer, int Length) {
 			this.Buffer = Buffer;
 			this.Length = Length;
+			MappedMemory = null;
 		}
 
 		public void Delete() {
@@ -59,14 +89,95 @@ namespace FishGL3 {
 		}
 	}
 
-	class FGLBufferList {
-		List<FGLBuffer> Buffers;
+	unsafe class FGLFramebuffer : ICLBuffer {
+		public FGLTexture ColorTexture;
+		public FGLTexture DepthTexture;
 
-		public FGLBufferList() {
-			Buffers = new List<FGLBuffer>();
+		public FGLFramebuffer() {
+			ColorTexture = null;
+			DepthTexture = null;
 		}
 
-		public int Add(FGLBuffer Buffer) {
+		public void Delete() {
+		}
+	}
+
+	unsafe class FGLTexture : ICLBuffer {
+		public cl_mem TextureBuffer;
+		public int Width;
+		public int Height;
+		public int Length;
+		public FGL_TEXTURE_TYPE Type;
+		public void* MappedMemory;
+
+
+		public FGLTexture(cl_mem TextureBuffer, int Width, int Height, int Length, FGL_TEXTURE_TYPE Type, void* MappedMemory) {
+			this.TextureBuffer = TextureBuffer;
+			this.Width = Width;
+			this.Height = Height;
+			this.Length = Length;
+			this.Type = Type;
+			this.MappedMemory = MappedMemory;
+		}
+
+		public void Delete() {
+			FGL.CLCheckError(CL.clReleaseMemObject(TextureBuffer));
+		}
+	}
+
+	class FGLRenderContext {
+		public FGLDevice Dev;
+		public cl_context Ctx;
+		public cl_command_queue Queue;
+		public cl_device_id Device;
+		public cl_program Program;
+		public cl_kernel MainKernel;
+		public uint WorkGroupSize;
+
+		public FGLRenderContext(FGLDevice Dev, cl_context Ctx, cl_command_queue Queue, cl_device_id Device, cl_program Program, cl_kernel MainKernel, uint WorkGroupSize) {
+			this.Dev = Dev;
+			this.Ctx = Ctx;
+			this.Queue = Queue;
+			this.Device = Device;
+			this.Program = Program;
+			this.MainKernel = MainKernel;
+			this.WorkGroupSize = WorkGroupSize;
+		}
+	}
+
+	class FGLWindow {
+		public int Width;
+		public int Height;
+
+		public IntPtr Wnd;
+		public IntPtr Rnd;
+		public IntPtr Tex;
+
+		static FGLWindow() {
+			SDL.SDL_Init(SDL.SDL_INIT_VIDEO);
+		}
+
+		public FGLWindow(int Width, int Height) {
+			this.Width = Width;
+			this.Height = Height;
+
+			SDL.SDL_CreateWindowAndRenderer(Width, Height, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN, out Wnd, out Rnd);
+			Tex = SDL.SDL_CreateTexture(Rnd, SDL.SDL_PIXELFORMAT_RGB24, (int)SDL.SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING, Width, Height);
+		}
+
+		public void SetWindowTitle(string Title) {
+			SDL.SDL_SetWindowTitle(Wnd, Title);
+		}
+	}
+
+	class FGLBufferList<T> where T : class {
+		List<T> Buffers;
+
+		public FGLBufferList() {
+			Buffers = new List<T>();
+		}
+
+		public int Add(T Buffer) {
 			for (int i = 0; i < Buffers.Count; i++) {
 				if (Buffers[i] == null) {
 					Buffers[i] = Buffer;
@@ -83,11 +194,15 @@ namespace FishGL3 {
 			Buffers[Handle] = null;
 		}
 
-		public FGLBuffer Get(int Handle) {
+		public T Get(int Handle) {
 			if (Buffers[Handle] == null || Handle < 0 || Handle >= Buffers.Count)
 				throw new Exception("Invalid FGL buffer object " + Handle);
 
 			return Buffers[Handle];
+		}
+
+		public T2 Get<T2>(int Handle) where T2 : T {
+			return (T2)Get(Handle);
 		}
 	}
 
@@ -102,41 +217,31 @@ namespace FishGL3 {
 		Depth
 	}
 
+	public enum FGL_FRAMEBUFFER_ATTACHMENT {
+		Color,
+		Depth,
+	}
+
 	public unsafe static class FGL {
-		static FGLGlobal Global;
-		static cl_mem CLGlobal;
-
-		static IntPtr Wnd;
-		static IntPtr Rnd;
-		static IntPtr Tex;
-
-		static cl_context CLContext;
+		/*static cl_context CLContext;
 		static cl_command_queue CLQueue;
 		static cl_device_id CLDevice;
 		static cl_program CLProgram;
 		static cl_kernel CLKernel;
-		static uint CLWorkGroupSize;
+		static uint CLWorkGroupSize;*/
 
-		static int ColorBuffer;
+		/*static FGLBufferList<FGLBuffer> BufferHandles = new FGLBufferList<FGLBuffer>();
+		static FGLBufferList<FGLFramebuffer> FramebufferHandles = new FGLBufferList<FGLFramebuffer>();
+		static FGLBufferList<FGLTexture> TextureHandles = new FGLBufferList<FGLTexture>();*/
 
-		static FGLBufferList BufferHandles = new FGLBufferList();
+		static FGLBufferList<object> FGLObjects = new FGLBufferList<object>();
 
-		public static void CreateWindow(int W, int H) {
-			Global = new FGLGlobal(W, H);
-
-			SDL.SDL_Init(SDL.SDL_INIT_VIDEO);
-			SDL.SDL_CreateWindowAndRenderer(W, H, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN, out Wnd, out Rnd);
-			Tex = SDL.SDL_CreateTexture(Rnd, SDL.SDL_PIXELFORMAT_RGB24, (int)SDL.SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING, W, H);
-
-			ErrorCode Err;
-			CLGlobal = CL.clCreateBuffer(CLContext, cl_mem_flags.CL_MEM_READ_ONLY, (ulong)sizeof(FGLGlobal), null, out Err);
-
-			ColorBuffer = CreateTexture(W, H, FGL_TEXTURE_TYPE.RGB);
-			MapBuffer(ColorBuffer, FGL_BUFFER_FLAGS.ReadWrite);
+		public static int CreateWindow(int W, int H) {
+			return FGLObjects.Add(new FGLWindow(W, H));
 		}
 
-		public static void SetWindowTitle(string Title) {
-			SDL.SDL_SetWindowTitle(Wnd, Title);
+		public static void SetWindowTitle(int WindowHandle, string Title) {
+			FGLObjects.Get<FGLWindow>(WindowHandle).SetWindowTitle(Title);
 		}
 
 		public static bool PollEvents() {
@@ -148,38 +253,41 @@ namespace FishGL3 {
 			return true;
 		}
 
-		public static void Clear(FGLColor ClearColor) {
-			int Len = Global.Width * Global.Height;
-			FGLColor* Pixels = (FGLColor*)GetBuffer(ColorBuffer).MappedMemory;
+		public static void Clear(int TextureHandle, FGLColor ClearColor) {
+			FGLTexture Tex = FGLObjects.Get<FGLTexture>(TextureHandle);
+			FGLColor* Pixels = (FGLColor*)Tex.MappedMemory;
 
-			for (int i = 0; i < Len; i++)
+			for (int i = 0; i < Tex.Width * Tex.Height; i++)
 				Pixels[i] = ClearColor;
 		}
 
-		public static void Swap() {
-			CL.clFinish(CLQueue);
+		public static void ClearFramebuffer(int FramebufferHandle, FGLColor ClearColor) {
+			FGLFramebuffer Framebuffer = FGLObjects.Get<FGLFramebuffer>(FramebufferHandle);
+			FGLColor* Pixels = (FGLColor*)Framebuffer.ColorTexture.MappedMemory;
+
+			for (int i = 0; i < Framebuffer.ColorTexture.Width * Framebuffer.ColorTexture.Height; i++)
+				Pixels[i] = ClearColor;
+		}
+
+		static void Swap(int ContextHandle, FGLTexture Texture, int WindowHandle) {
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
+			CL.clFinish(Ctx.Queue);
+
+			FGLWindow Window = FGLObjects.Get<FGLWindow>(WindowHandle);
 
 			SDL.SDL_Rect Rect = new SDL.SDL_Rect();
 			Rect.x = Rect.y = 0;
-			Rect.w = Global.Width;
-			Rect.h = Global.Height;
+			Rect.w = Window.Width;
+			Rect.h = Window.Height;
 
-			SDL.SDL_UpdateTexture(Tex, ref Rect, new IntPtr(GetBuffer(ColorBuffer).MappedMemory), sizeof(FGLColor) * Global.Width);
-			SDL.SDL_RenderClear(Rnd);
-			SDL.SDL_RenderCopy(Rnd, Tex, IntPtr.Zero, IntPtr.Zero);
-			SDL.SDL_RenderPresent(Rnd);
+			SDL.SDL_UpdateTexture(Window.Tex, ref Rect, new IntPtr(Texture.MappedMemory), sizeof(FGLColor) * Window.Width);
+			SDL.SDL_RenderClear(Window.Rnd);
+			SDL.SDL_RenderCopy(Window.Rnd, Window.Tex, IntPtr.Zero, IntPtr.Zero);
+			SDL.SDL_RenderPresent(Window.Rnd);
 		}
 
-		static string CL_GetPlatformName(cl_platform_id P) {
-			ErrorCode err;
-
-			string Ext = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_EXTENSIONS, out err);
-			string Name = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_NAME, out err);
-			string Profile = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_PROFILE, out err);
-			string Vendor = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_VENDOR, out err);
-			string Version = CL.clGetPlatformInfo(P, cl_platform_info.CL_PLATFORM_VERSION, out err);
-
-			return Name;
+		public static void SwapFramebuffer(int ContextHandle, int FramebufferHandle, int WindowHandle) {
+			Swap(ContextHandle, FGLObjects.Get<FGLFramebuffer>(FramebufferHandle).ColorTexture, WindowHandle);
 		}
 
 		/*static string CL_GetDeviceInfo(Device Dev) {
@@ -193,9 +301,9 @@ namespace FishGL3 {
 			return null;
 		}*/
 
-		internal static void CLCheckError(ErrorCode Err) {
+		internal static void CLCheckError(ErrorCode Err, cl_program? Prog = null, cl_device_id? Dev = null) {
 			if (Err == ErrorCode.CL_BUILD_PROGRAM_FAILURE) {
-				string Log = CL.clGetProgramBuildInfoStr(CLProgram, CLDevice, cl_program_build_info.CL_PROGRAM_BUILD_LOG, out ErrorCode Tmp);
+				string Log = CL.clGetProgramBuildInfoStr(Prog.Value, Dev.Value, cl_program_build_info.CL_PROGRAM_BUILD_LOG, out ErrorCode Tmp);
 				Console.WriteLine(Log);
 			}
 
@@ -203,91 +311,153 @@ namespace FishGL3 {
 				throw new Exception("OpenCL error " + Err);
 		}
 
-		static cl_program CL_CreateProgram(string[] Sources) {
+		static cl_program CL_CreateProgram(cl_context Ctx, cl_device_id Dev, string[] Sources) {
 			for (int i = 0; i < Sources.Length; i++)
 				Sources[i] = Sources[i].Replace("\r", "");
 
-			cl_program Prog = CL.clCreateProgramWithSource(CLContext, Sources, out ErrorCode Err);
-			CLCheckError(Err);
+			cl_program Prog = CL.clCreateProgramWithSource(Ctx, Sources, out ErrorCode Err);
+			CLCheckError(Err, Prog, Dev);
 			return Prog;
 		}
 
-		public static void CreateRenderContext(string PlatformName = "amd") {
-			const bool DisableOptimizations = true;
+		static FGLDevice CreateFGLDevice(cl_platform_id Plat, cl_device_id Dev, FGL_DEVICE_TYPE DevType) {
+			ErrorCode err;
 
-			string Include = "-I CL ";
+			string Ext = CL.clGetPlatformInfo(Plat, cl_platform_info.CL_PLATFORM_EXTENSIONS, out err);
+			string Name = CL.clGetPlatformInfo(Plat, cl_platform_info.CL_PLATFORM_NAME, out err);
+			string Profile = CL.clGetPlatformInfo(Plat, cl_platform_info.CL_PLATFORM_PROFILE, out err);
+			string Vendor = CL.clGetPlatformInfo(Plat, cl_platform_info.CL_PLATFORM_VENDOR, out err);
+			string Version = CL.clGetPlatformInfo(Plat, cl_platform_info.CL_PLATFORM_VERSION, out err);
 
+			return new FGLDevice(Ext, Name, Profile, Vendor, Version, DevType, Plat, Dev);
+		}
+
+		public static FGLDevice[] GetAllDevices() {
 			ErrorCode Err;
+			List<FGLDevice> Devices = new List<FGLDevice>();
 
 			cl_platform_id[] Platforms = CL.clGetPlatformIDs(out Err);
-			cl_platform_id SelectedPlatform = Platforms[0];
+			CLCheckError(Err);
 
-			if (PlatformName != null) {
-				foreach (var P in Platforms) {
-					string Name = CL_GetPlatformName(P).ToLower();
+			for (int i = 0; i < Platforms.Length; i++) {
+				cl_device_id[] DevicesGPU = CL.clGetDeviceIDs(Platforms[i], cl_device_type.CL_DEVICE_TYPE_GPU, out Err);
+				cl_device_id[] DevicesCPU = CL.clGetDeviceIDs(Platforms[i], cl_device_type.CL_DEVICE_TYPE_CPU, out Err);
+				cl_device_id[] DevicesAccelerators = CL.clGetDeviceIDs(Platforms[i], cl_device_type.CL_DEVICE_TYPE_ACCELERATOR, out Err);
 
-					if (Name.Contains(PlatformName.ToLower())) {
-						SelectedPlatform = P;
-						break;
-					}
-				}
+				if (DevicesGPU != null)
+					foreach (var GPU in DevicesGPU)
+						Devices.Add(CreateFGLDevice(Platforms[i], GPU, FGL_DEVICE_TYPE.GPU));
+
+				if (DevicesCPU != null)
+					foreach (var CPU in DevicesCPU)
+						Devices.Add(CreateFGLDevice(Platforms[i], CPU, FGL_DEVICE_TYPE.CPU));
+
+				if (DevicesAccelerators != null)
+					foreach (var Accel in DevicesAccelerators)
+						Devices.Add(CreateFGLDevice(Platforms[i], Accel, FGL_DEVICE_TYPE.Accelerator));
 			}
 
-			cl_device_id[] Devices = CL.clGetDeviceIDs(SelectedPlatform, cl_device_type.CL_DEVICE_TYPE_GPU, out Err);
+			return Devices.ToArray();
+		}
 
-			if (Devices.Length != 1)
-				throw new Exception("Expected one GPU");
+		public static int CreateRenderContext(FGLDevice Dev) {
+			const bool DisableOptimizations = true;
+			string Include = "-I CL ";
+			cl_device_id Device = Dev.Device;
 
-			CLDevice = Devices[0];
+			ErrorCode Err;
+			cl_context Ctx = CL.clCreateContext(null, 1, &Device, null, null, out Err);
+			cl_command_queue Queue = CL.clCreateCommandQueue(Ctx, Device, cl_command_queue_properties.NONE, out Err);
 
-			//CL_GetDeviceInfo(Devices[0]);
+			cl_program Prog = CL_CreateProgram(Ctx, Device, new[] { File.ReadAllText("CL/kernel.cl"), File.ReadAllText("CL/vertex.cl"), File.ReadAllText("CL/fragment.cl") });
+			CLCheckError(CL.clBuildProgram(Prog, 0, null, Include + (DisableOptimizations ? "-cl-opt-disable " : ""), null, null), Prog, Device);
 
-			CLContext = CL.clCreateContext(null, 1, Devices, null, null, out Err);
-			CLQueue = CL.clCreateCommandQueue(CLContext, Devices[0], cl_command_queue_properties.NONE, out Err);
-
-			CLProgram = CL_CreateProgram(new[] { File.ReadAllText("CL/kernel.cl"), File.ReadAllText("CL/vertex.cl"), File.ReadAllText("CL/fragment.cl") });
-			CLCheckError(CL.clBuildProgram(CLProgram, 0, null, Include + (DisableOptimizations ? "-cl-opt-disable " : ""), null, null));
-
-			CLKernel = CL.clCreateKernel(CLProgram, "main", out Err);
+			cl_kernel MainKernel = CL.clCreateKernel(Prog, "_main", out Err);
 			CLCheckError(Err);
 
 			ulong Val = 0;
-			Err = CL.clGetKernelWorkGroupInfo(CLKernel, Devices[0], cl_kernel_work_group_info.CL_KERNEL_WORK_GROUP_SIZE, sizeof(ulong), &Val, null);
-			CLWorkGroupSize = (uint)Val;
+			Err = CL.clGetKernelWorkGroupInfo(MainKernel, Device, cl_kernel_work_group_info.CL_KERNEL_WORK_GROUP_SIZE, sizeof(ulong), &Val, null);
+			uint WorkGroupSize = (uint)Val;
+
+			return FGLObjects.Add(new FGLRenderContext(Dev, Ctx, Queue, Device, Prog, MainKernel, WorkGroupSize));
 		}
 
-		public static void Draw(int TriangleBuffer, int Triangles) {
-			Global.TriCount = Triangles / 3;
+		public static void Draw(int ContextHandle, int FramebufferHandle, int TriangleBuffer, int VertexCount) {
+			FGLFramebuffer Framebuffer = FGLObjects.Get<FGLFramebuffer>(FramebufferHandle);
 
-			fixed (FGLGlobal* GlobalPtr = &Global) {
-				CL.clEnqueueWriteBuffer(CLQueue, CLGlobal, true, 0, (ulong)sizeof(FGLGlobal), GlobalPtr, 0, null, null);
-			}
+			if (Framebuffer.ColorTexture == null)
+				throw new Exception("Framebuffer has no color texture");
 
-			CL.clSetKernelArg(CLKernel, 0, CLGlobal);
-			CL.clSetKernelArg(CLKernel, 1, GetBuffer(ColorBuffer).Buffer);
-			CL.clSetKernelArg(CLKernel, 2, GetBuffer(TriangleBuffer).Buffer);
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
 
-			CLCheckError(CL.clEnqueueNDRangeKernel(CLQueue, CLKernel, 2, null, new ulong[] { (ulong)Global.Width, (ulong)Global.Height }, new ulong[] { (ulong)16, (ulong)16 }, 0, null, null));
+			CLCheckError(CL.clSetKernelArg<int>(Ctx.MainKernel, 0, Framebuffer.ColorTexture.Width));
+			CLCheckError(CL.clSetKernelArg<int>(Ctx.MainKernel, 1, Framebuffer.ColorTexture.Height));
+			CLCheckError(CL.clSetKernelArg<int>(Ctx.MainKernel, 2, VertexCount));
+			CLCheckError(CL.clSetKernelArg(Ctx.MainKernel, 3, Framebuffer.ColorTexture.TextureBuffer));
+			CLCheckError(CL.clSetKernelArg(Ctx.MainKernel, 4, FGLObjects.Get<FGLBuffer>(TriangleBuffer).Buffer));
+
+			ulong[] GlobalWorkSet = new ulong[] { (ulong)Framebuffer.ColorTexture.Width, (ulong)Framebuffer.ColorTexture.Height };
+			CLCheckError(CL.clEnqueueNDRangeKernel(Ctx.Queue, Ctx.MainKernel, 2, null, GlobalWorkSet, new ulong[] { 1, 1 }, 0, null, null));
 		}
 
-		static FGLBuffer GetBuffer(int BufferObject) {
-			return BufferHandles.Get(BufferObject);
-		}
+		public static int CreateBuffer(int ContextHandle, int Size, FGL_BUFFER_FLAGS Flags = FGL_BUFFER_FLAGS.ReadWrite) {
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
 
-		public static int CreateBuffer(int Size, FGL_BUFFER_FLAGS Flags = FGL_BUFFER_FLAGS.ReadWrite) {
-			cl_mem_flags MemFlags = (cl_mem_flags)Flags | cl_mem_flags.CL_MEM_ALLOC_HOST_PTR;
-			cl_mem Buffer = CL.clCreateBuffer(CLContext, MemFlags, (ulong)Size, null, out ErrorCode Err);
+			cl_mem_flags MemFlags = (cl_mem_flags)Flags;
+			cl_mem Buffer = CL.clCreateBuffer(Ctx.Ctx, MemFlags, (ulong)Size, null, out ErrorCode Err);
 			CLCheckError(Err);
 
-			return BufferHandles.Add(new FGLBuffer(Buffer, Size));
+			return FGLObjects.Add(new FGLBuffer(Buffer, Size));
 		}
 
-		public static void DeleteBuffer(int BufferObject) {
-			BufferHandles.Get(BufferObject).Delete();
-			BufferHandles.Remove(BufferObject);
+		public static void DeleteBuffer(int BufferHandle) {
+			FGLObjects.Get<FGLBuffer>(BufferHandle).Delete();
+			FGLObjects.Remove(BufferHandle);
 		}
 
-		public static int CreateTexture(int Width, int Height, FGL_TEXTURE_TYPE Type) {
+		public static void WriteBuffer(int ContextHandle, int BufferHandle, void* Data, int Len) {
+			FGLBuffer Buffer = FGLObjects.Get<FGLBuffer>(BufferHandle);
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
+
+			CLCheckError(CL.clEnqueueWriteBuffer(Ctx.Queue, Buffer.Buffer, true, 0, (ulong)Len, Data, 0, null, null));
+		}
+
+		public static void WriteBuffer<T>(int ContextHandle, int BufferHandle, T[] Data) where T : unmanaged {
+			fixed (T* DataPtr = Data)
+				WriteBuffer(ContextHandle, BufferHandle, DataPtr, sizeof(T) * Data.Length);
+		}
+
+		public static void* MapBuffer(int ContextHandle, int BufferHandle, FGL_BUFFER_FLAGS Flags) {
+			cl_map_flags MapFlags;
+
+			if (Flags == FGL_BUFFER_FLAGS.ReadOnly)
+				MapFlags = cl_map_flags.CL_MAP_READ;
+			else if (Flags == FGL_BUFFER_FLAGS.WriteOnly)
+				MapFlags = cl_map_flags.CL_MAP_WRITE;
+			else if (Flags == FGL_BUFFER_FLAGS.ReadWrite)
+				MapFlags = cl_map_flags.CL_MAP_READ | cl_map_flags.CL_MAP_WRITE;
+			else
+				throw new Exception("Invalid buffer map flags " + Flags);
+
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
+			FGLBuffer Buffer = FGLObjects.Get<FGLBuffer>(BufferHandle);
+
+			void* Mem = CL.clEnqueueMapBuffer(Ctx.Queue, Buffer.Buffer, true, MapFlags, 0, (ulong)Buffer.Length, 0, null, null, out ErrorCode Err);
+			CLCheckError(Err);
+
+			Buffer.MappedMemory = Mem;
+			return Mem;
+		}
+
+		public static void UnmapBuffer(int ContextHandle, int BufferHandle) {
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
+			FGLBuffer Buffer = FGLObjects.Get<FGLBuffer>(BufferHandle);
+
+			CLCheckError(CL.clEnqueueUnmapMemObject(Ctx.Queue, Buffer.Buffer, Buffer.MappedMemory, 0, null, null));
+			Buffer.MappedMemory = null;
+		}
+
+		public static int CreateTexture(int ContextHandle, int Width, int Height, FGL_TEXTURE_TYPE Type) {
 			int Len = Width * Height;
 
 			switch (Type) {
@@ -303,45 +473,52 @@ namespace FishGL3 {
 					throw new Exception("Invalid texture type " + Type);
 			}
 
-			return CreateBuffer(Len);
-		}
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
 
-		public static void WriteBuffer(int BufferObject, void* Data, int Len) {
-			CL.clEnqueueWriteBuffer(CLQueue, GetBuffer(BufferObject).Buffer, true, 0, (ulong)Len, Data, 0, null, null);
-		}
-
-		public static void WriteBuffer<T>(int BufferObject, T[] Data) where T : unmanaged {
-			fixed (T* DataPtr = Data)
-				WriteBuffer(BufferObject, DataPtr, sizeof(T) * Data.Length);
-		}
-
-		public static void* MapBuffer(int BufferObject, FGL_BUFFER_FLAGS Flags) {
-			FGLBuffer Buffer = BufferHandles.Get(BufferObject);
-
-			cl_map_flags MapFlags;
-
-			if (Flags == FGL_BUFFER_FLAGS.ReadOnly)
-				MapFlags = cl_map_flags.CL_MAP_READ;
-			else if (Flags == FGL_BUFFER_FLAGS.WriteOnly)
-				MapFlags = cl_map_flags.CL_MAP_WRITE;
-			else if (Flags == FGL_BUFFER_FLAGS.ReadWrite)
-				MapFlags = cl_map_flags.CL_MAP_READ | cl_map_flags.CL_MAP_WRITE;
-			else
-				throw new Exception("Invalid buffer map flags " + Flags);
-
-			void* Mem = CL.clEnqueueMapBuffer(CLQueue, Buffer.Buffer, true, MapFlags, 0, (ulong)Buffer.Length, 0, null, null, out ErrorCode Err);
+			cl_mem TextureBuffer = CL.clCreateBuffer(Ctx.Ctx, cl_mem_flags.CL_MEM_READ_WRITE | cl_mem_flags.CL_MEM_ALLOC_HOST_PTR, (ulong)Len, null, out ErrorCode Err);
 			CLCheckError(Err);
 
-			Buffer.MappedMemory = Mem;
-			return Mem;
+			void* MappedMemory = CL.clEnqueueMapBuffer(Ctx.Queue, TextureBuffer, true, cl_map_flags.CL_MAP_READ | cl_map_flags.CL_MAP_WRITE, 0, (ulong)Len, 0, null, null, out Err);
+			CLCheckError(Err);
+
+			return FGLObjects.Add(new FGLTexture(TextureBuffer, Width, Height, Len, Type, MappedMemory));
 		}
 
-		public static void UnmapBuffer(int BufferObject) {
-			FGLBuffer Buffer = BufferHandles.Get(BufferObject);
+		public static void DeleteTexture(int ContextHandle, int TextureHandle) {
+			FGLRenderContext Ctx = FGLObjects.Get<FGLRenderContext>(ContextHandle);
+			FGLTexture Tex = FGLObjects.Get<FGLTexture>(TextureHandle);
 
-			CLCheckError(CL.clEnqueueUnmapMemObject(CLQueue, Buffer.Buffer, Buffer.MappedMemory, 0, null, null));
+			CLCheckError(CL.clEnqueueUnmapMemObject(Ctx.Queue, Tex.TextureBuffer, Tex.MappedMemory, 0, null, null));
+			Tex.Delete();
+			FGLObjects.Remove(TextureHandle);
+		}
 
-			Buffer.MappedMemory = null;
+		public static int CreateFramebuffer() {
+			return FGLObjects.Add(new FGLFramebuffer());
+		}
+
+		public static void DeleteFramebuffer(int FramebufferHandle) {
+			FGLFramebuffer Framebuffer = FGLObjects.Get<FGLFramebuffer>(FramebufferHandle);
+			Framebuffer.Delete();
+			FGLObjects.Remove(FramebufferHandle);
+		}
+
+		public static void FramebufferAttachTexture(int FramebufferHandle, int TextureHandle, FGL_FRAMEBUFFER_ATTACHMENT Attachment) {
+			FGLFramebuffer Framebuffer = FGLObjects.Get<FGLFramebuffer>(FramebufferHandle);
+			FGLTexture Texture = FGLObjects.Get<FGLTexture>(TextureHandle);
+
+			switch (Attachment) {
+				case FGL_FRAMEBUFFER_ATTACHMENT.Color:
+					Framebuffer.ColorTexture = Texture;
+					break;
+
+				case FGL_FRAMEBUFFER_ATTACHMENT.Depth:
+					Framebuffer.DepthTexture = Texture;
+					break;
+
+				default:
+					throw new Exception("Unknown framebuffer texture attachment " + Attachment);
+			}
 		}
 	}
 }

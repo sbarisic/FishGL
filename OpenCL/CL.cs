@@ -11,7 +11,7 @@ using size_t = System.UInt64;
 
 namespace OpenCL {
 	public unsafe static class CL {
-		const string LibName = "opencl.dll";
+		const string LibName = "opencl";
 
 		[DllImport(LibName)]
 		public static extern ErrorCode clGetPlatformIDs(cl_uint num_entries, cl_platform_id* platforms, cl_uint* num_platforms);
@@ -49,7 +49,7 @@ namespace OpenCL {
 					return null;
 			}
 
-			return Encoding.UTF8.GetString(data);
+			return Encoding.UTF8.GetString(data.Take(data.Length - 1).ToArray());
 		}
 
 		[DllImport(LibName)]
@@ -69,6 +69,10 @@ namespace OpenCL {
 
 		public static ErrorCode clSetKernelArg(cl_kernel kernel, cl_uint arg_index, cl_mem mem) {
 			return clSetKernelArg(kernel, arg_index, (size_t)sizeof(cl_mem), &mem);
+		}
+
+		public static ErrorCode clSetKernelArg<T>(cl_kernel kernel, cl_uint arg_index, int Val) where T : unmanaged {
+			return clSetKernelArg(kernel, arg_index, (size_t)sizeof(T), &Val);
 		}
 
 		[DllImport(LibName)]
@@ -91,7 +95,7 @@ namespace OpenCL {
 					return null;
 			}
 
-			return Encoding.UTF8.GetString(chars);
+			return Encoding.UTF8.GetString(chars.Take(chars.Length - 1).ToArray());
 		}
 
 		[DllImport(LibName)]
@@ -187,5 +191,8 @@ namespace OpenCL {
 
 		[DllImport(LibName)]
 		public static extern ErrorCode clEnqueueUnmapMemObject(cl_command_queue command_queue, cl_mem memobj, void* mapped_ptr, cl_uint num_events_in_wait_list, cl_event* event_wait_list, cl_event* evt);
+
+		[DllImport(LibName)]
+		public static extern ErrorCode clWaitForEvents(cl_uint num_events, cl_event* event_list);
 	}
 }
