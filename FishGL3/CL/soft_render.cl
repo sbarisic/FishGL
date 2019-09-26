@@ -49,6 +49,10 @@ Color colorf(Vec4 Clr) {
 	return color((byte)(Clr.X * Clr.W * 255), (byte)(Clr.Y * Clr.W * 255), (byte)(Clr.Z * Clr.W * 255));
 }
 
+Vec4 colorToVec4(Color C) {
+	return vec4(C.R / 255.0f, C.G / 255.0f, C.B / 255.0f, 1);
+}
+
 typedef struct {
 	Vec3 A;
 	Vec3 B;

@@ -434,7 +434,7 @@ namespace FishGL3 {
 			return FGLObjects.Add(new FGLRenderContext(Dev, Ctx, Queue, Device, Prog, MainKernel, WorkGroupSize));
 		}
 
-		public static void Draw(int ContextHandle, int FramebufferHandle, int TriangleBuffer, int VertexCount) {
+		public static void Draw(int ContextHandle, int FramebufferHandle, int VertexBuffer, int ColorBuffer, int VertexCount) {
 			FGLFramebuffer Framebuffer = FGLObjects.Get<FGLFramebuffer>(FramebufferHandle);
 
 			if (Framebuffer.ColorTexture == null)
@@ -446,7 +446,8 @@ namespace FishGL3 {
 			CLCheckError(CL.clSetKernelArg<int>(Ctx.MainKernel, 1, Framebuffer.ColorTexture.Height));
 			CLCheckError(CL.clSetKernelArg<int>(Ctx.MainKernel, 2, VertexCount));
 			CLCheckError(CL.clSetKernelArg(Ctx.MainKernel, 3, Framebuffer.ColorTexture.TextureBuffer));
-			CLCheckError(CL.clSetKernelArg(Ctx.MainKernel, 4, FGLObjects.Get<FGLBuffer>(TriangleBuffer).Buffer));
+			CLCheckError(CL.clSetKernelArg(Ctx.MainKernel, 4, FGLObjects.Get<FGLBuffer>(VertexBuffer).Buffer));
+			CLCheckError(CL.clSetKernelArg(Ctx.MainKernel, 5, FGLObjects.Get<FGLBuffer>(ColorBuffer).Buffer));
 
 			ulong[] GlobalWorkSet = new ulong[] { (ulong)Framebuffer.ColorTexture.Width, (ulong)Framebuffer.ColorTexture.Height };
 			CLCheckError(CL.clEnqueueNDRangeKernel(Ctx.Queue, Ctx.MainKernel, 2, null, GlobalWorkSet, new ulong[] { 1, 1 }, 0, null, null));
